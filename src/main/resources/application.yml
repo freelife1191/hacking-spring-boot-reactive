@@ -1,0 +1,6 @@
+# hidden으로 지정된 웹 메소드(DELETE, PUT, PATCH) 처리 활성화
+spring:
+  webflux:
+    hiddenmethod:
+      filter:
+        enabled: true

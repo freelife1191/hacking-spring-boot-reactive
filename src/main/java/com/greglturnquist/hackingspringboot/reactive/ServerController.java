@@ -24,6 +24,7 @@ public class ServerController {
     // end::controller[]
 
     // tag::deliver[]
+    // 요리를 전달하는 함수
     @GetMapping(value = "/served-dishes", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     Flux<Dish> deliverDishes() {
         return this.kitchen.getDishes() //

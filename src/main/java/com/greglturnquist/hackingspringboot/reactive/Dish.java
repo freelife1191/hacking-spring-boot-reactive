@@ -1,6 +1,7 @@
 package com.greglturnquist.hackingspringboot.reactive;
 
 /**
+ * 요리(Dish) 도메인 객체 정의
  * Created by KMS on 2021/09/11.
  */
 public class Dish {
