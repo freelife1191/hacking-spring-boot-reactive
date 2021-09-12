@@ -237,3 +237,84 @@ public class HackingSpringBootApplicationBlockHoundCustomized {
 - 스레드 경계를 넘는 스택 트레이스 설정
 - 리액터의 로깅 연산자를 사용해서 로그 정보와 리액티브 스트림 시그널을 모두 로그에 남기는 방법
 - JDK 메소드까지 포함해서 블로킹 코드 호출을 검출하는 블록하운드 사용법
+
+# PART 4. 스프링 부트 테스트
+
+```java
+// 테스트 대상 클래스 아무런 애너테이션도 붙지 않으며 테스트할 때 초기화된다
+InventoryService inventoryService;
+
+// 테스트 대상이 아니므로 가짜 객체를 만들고 @MockBean 애너테이션을 붙여 스프링 빈으로 등록한다
+// @MockBean 애너테이션을 보면 Mockito를 사용해서 가짜 객체를 만들고 이를 애플리케이션 컨텍스트에 빈으로 추가한다
+@MockBean private ItemRepository itemRepository;
+@MockBean private CartRepository cartRepository;
+```
+
+위의 코드는 아래의 코드와 같다
+
+```java
+@BeforeEach
+void setUp() {
+    itemRepository = mock(ItemRepository.class)
+    cartRepository = mock(CartRepository.class);
+}
+```
+
+리액티브 코드를 테스트할 때 핵심은 기능만을 검사하는 게 아니라 리액티브 스트림 시그널도 함께 검사해야 한다는 점이다
+리액티브 스트림은 `onSubscribe`, `OnNext`, `onError`, `onComplete`를 말한다
+`onNext`와 `onComplete`가 모두 발생하면 **successful path**라고 부른다
+
+- `StepVerifier`: 결괏값을 얻기 위해 블로킹 방식으로 기다리는 대신에 리액터의 테스트 도구가 대신 구독을 하고 값을 확인할 수 있게 해준다
+- `expectNextMatches()`: 값을 검증할 수 있는 적절한 함수를 `expectNextMatches()`에 람다식 인자로 전달해준다
+- `verifyComplete()`: 호출해서 onComplete 시그널을 확인
+
+테스트 대상 메소드 호출부를 테스트 코드 맨 위에 배치하고 리액터의 `as()` 연산자를 사용해서
+테스트 대상 메소드 결괏값을 StepVerifier로 흘려보내는 탑 레벨 방식으로 작성하면
+테스트 코드의 의도가 더 분명히 드러난다
+
+리액터의 `StepVerifier`를 사용하는 모든 테스트 케이스에서 `onSubscribe` 시그널이 발생했다
+하지만 `doOnSubscribe()`를 사용해서 `onSubscribe` 시그널 발생 시 특정 동작을 수행하도록 작성하지 않았다면
+`onSubscribe` 시그널 발생은 자명하므로 별도로 테스트할 필요가 없다
+`doOnSubscribe()`에 구독 시 실행돼야 하는 기능을 작성했다면 `expectSubscription()`을 사용해서 구독에 대한 테스트도 반드시 추가해야 한다
+
+## 스프링 부트 슬라이스 테스트
+
+단위 테스트와 종단 간 통합 테스트 중간 정도에 해당하는 테스트
+
+- `@AutoConfigureRestDocs`
+- `@DataJdbcTest`
+- `@DataJpaTest`
+- `@DataLdapTest`
+- `@DataMongoTest`
+- `@DataNeo4jTest`
+- `@DataRedisTest`
+- `@JdbcTest`
+- `@JooqTest`
+- `@JsonTest`
+- `@RestClientTest`
+- `@WebFluxTest`
+- `@WebMvcTest`
+
+### 몽고디비 슬라이스 테스트
+스프링 데이터 몽고디비 관련 모든 기능을 사용할 수 있게 하고 그외 `@Component` 애너테이션이 붙어있는 다른 빈 정의를 무시한다
+종단간 테스트와 마찬가지로 실제 데이터 베이스 연산을 포함하면서도 테스트 수행속도 개선 효과가 꽤 크다
+테스트 케이스에서 가짜 객체를 전혀 사용하지 않으므로 테스트 결과에 대한 자신감은 더 높아지면서 테스트 성능은 거의 60%나 상승했다
+
+### 블록하운드 사용 단위 테스트
+블록하운드가 검출해 내는 것
+
+- `java.lang.Thread#sleep()`
+- 여러 가지 Socket 및 네트워크 연산
+- 파일 접근 메소드 일부
+
+검출될 수 있는 전체 메소드 목록은 `BlockHound` 클래스 안에 있는 `Builder` 클래스의 `blockingMethods` 해시맵에서 확인할 수 있음
+
+# 4장에서 배운 내용
+
+- `StepVerifier`를 사용해서 리액티브 테스트 작성
+- 리액티브 스트림보다 하부 계층에 위치하는 도메인 객체를 간단하게 테스트
+- `@MockBean`을 사용해서 만든 가짜 협력자와 `StepVerifier`를 사용해서 리액티브 서비스 테스트
+- 리액티브 결과뿐 아니라 complete와 error 같은 리액티브 스트림 시그널도 검증
+- 스프링 부트를 사용해서 완전한 기능을 갖춘 웹 컨테이너 실행
+- `@WebFluxTest`나 `@DataMongoTest`를 사용해서 애플리케이션의 일부 계층만 더 빠르게 테스트할 수 있는 슬라이스 테스트
+- 리액터 블록하운드 모듈을 사용해서 블로킹 코드 검출
