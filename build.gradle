@@ -18,6 +18,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
     implementation 'org.mongodb:mongodb-driver-sync'
     // MongoDB 테스트DB
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    // 블록하운드 의존관계 추가
+    implementation 'io.projectreactor.tools:blockhound:1.0.6.RELEASE'
+
     implementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'

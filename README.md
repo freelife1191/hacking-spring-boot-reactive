@@ -120,3 +120,120 @@ void 대신에 `Mono<Void>`를 반환타입을 사용함
 - 객체 저장 및 조회에 사용할 리포지토리 생성
 - 커스텀 쿼리를 작성하는 여러 가지 방식
 - 앞에서 다룬 모든 내용을 서비스에 옮겨 담아서 웹 계층과 분리하는 방법
+
+# PART 3. 스프링 부트 개발자 도구
+
+## devtools
+```groovy
+developmentOnly 'org.springframework.boot:spring-boot-devtools'
+```
+
+```yaml
+  devtools:
+    restart:
+      # 재시작 유발 배제 경로 지정
+      exclude: static/**,public/**
+#      # 자동재시작 사용여부
+#      enabled: true
+#      # classpath 감지 주기 설정(선택사항)
+#      # 빌드하는 시간이 오래걸려 재시작 주기를 길게 가져가고 싶다면 아래의 값을 이용해 갱신
+#      # poll-interval 값은 항상 quiet-period 보다 커야한다
+#      #poll-interval: 2s
+#      #quiet-period: 1s
+```
+
+1. cmd + shift + A - Registry - compiler.automake.allow.when.app.running(체크)
+2. Preferences - Build project automatically(체크)
+3. 크롬 확장 프로그램(RemoteLiveReload) 설치
+
+## 개발에서 Thmeleaf 캐시 비활성화
+
+```yaml
+spring:
+  thymeleaf:
+    # 개발환경에서 캐시 기능 비활성화
+    cache: false
+```
+
+## 로깅
+
+```yaml
+logging:
+  level:
+    web: debug
+```
+
+## 리액터 플로우 디버깅
+
+### Hooks.onOperatorDebug() 사용 스택 트레이스
+
+리액터가 처리 흐름 조립 시점에서 호출부 세부정보를 수집하고 구독해서 실행되는 시점에 세부정보를 넘겨줌
+
+리액터가 스레드별 스택 세부정보를 스레드 경계를 넘어서 전달하는 과정에는 굉장히 많은 비용이 든다
+성능 문제를 일으킬 수 있으므로 실제 운영환경 또는 실제 벤치마크에서는 호출해서는 안됨
+
+```java
+public class ReactorDebuggingExample {
+
+    public static void main(String[] args) {
+
+        Hooks.onOperatorDebug(); // 리액터의 백트레이싱(backtracing) 활성화
+
+        Mono<Integer> source;
+        if (new Random().nextBoolean()) {
+            source = Flux.range(1, 10).elementAt(5);
+        } else {
+            source = Flux.just(1, 2, 3, 4).elementAt(5); //89행
+        }
+
+        source
+            .subscribeOn(Schedulers.parallel())
+            .block(); //93행
+    }
+}
+```
+
+```
+Assembly trace from producer [reactor.core.publisher.MonoElementAt] :
+	reactor.core.publisher.Flux.elementAt(Flux.java:4859)
+	com.greglturnquist.hackingspringboot.reactive.ReactorDebuggingExample.main(ReactorDebuggingExample.java:23)
+Error has been observed at the following site(s):
+	|_   Flux.elementAt ⇢ at com.greglturnquist.hackingspringboot.reactive.ReactorDebuggingExample.main(ReactorDebuggingExample.java:23)
+	|_ Mono.subscribeOn ⇢ at com.greglturnquist.hackingspringboot.reactive.ReactorDebuggingExample.main(ReactorDebuggingExample.java:27)
+```
+
+## 블록하운드를 사용한 블로킹 코드 검출
+개발자가 직접 작성한 코드뿐만 아니라 서드파티 라이브러리에 사용된 블로킹 메소드 호출을 모두 찾아내서 알려주는 자바 에이전트다
+블록하운드는 JDK 자체에서 호출되는 블로킹 코드까지도 찾아낸다
+
+블록하운드를 애플리케이션에 심은 후에 동작하지 않도록 제거하는 것은 불가능하다
+블록하운드는 자바 에이전트 API를 사용하기 때문에 심어진 채로 애플리케이션이 실행된 후에는 제거할 수 없다
+애플리케이션을 종료하고 `install()` 호출 코드를 제거해서 아예 심지 않고 애플리케이션을 다시 시작하는 것이 블록하운드 기능을 제거할 수 있는 유일한 방법이다
+
+```groovy
+implementation 'io.projectreactor.tools:blockhound:1.0.6.RELEASE'
+```
+
+```java
+@SpringBootApplication
+public class HackingSpringBootApplicationBlockHoundCustomized {
+
+    public static void main(String[] args) {
+        BlockHound.builder() // <1> SpringApplication.run()보다 먼저 실행된다
+                .allowBlockingCallsInside( //
+                        TemplateEngine.class.getCanonicalName(), "process") // <2> 허용 리스트에 추가한다
+                .install(); // <3>호출하면 커스텀 설정이 적용된 블록하운드가 애플리케이션에 심어진다
+
+        SpringApplication.run(HackingSpringBootApplicationBlockHoundCustomized.class, args);
+    }
+}
+```
+
+## 3장에서 배운 내용
+- 스프링 부트 개발자 도구를 프로젝트에 추가하는 방법
+- 소스 코드 변경 시 애플리케이션 자동 재시작
+- 개발 모드로 실행 시 캐시 동작을 막는 방법
+- 스프링 부트에 내장된 라이브 리로드 기능
+- 스레드 경계를 넘는 스택 트레이스 설정
+- 리액터의 로깅 연산자를 사용해서 로그 정보와 리액티브 스트림 시그널을 모두 로그에 남기는 방법
+- JDK 메소드까지 포함해서 블로킹 코드 호출을 검출하는 블록하운드 사용법

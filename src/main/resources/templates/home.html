@@ -7,7 +7,6 @@
 <body>
 <h1>Welcome to Hacking with Spring Boot!</h1>
 
-<!-- 판매 상품 전체 목록을 보여주는 <table> -->
 <!-- tag::1[] -->
 <h2>Inventory Management</h2>
 <table>
@@ -32,7 +31,6 @@
 </table>
 <!-- end::1[] -->
 
-<!-- 현재 장바구니를 보여주는 <table> 요소 -->
 <!-- tag::2[] -->
 <h2>My Cart</h2>
 <table>
@@ -42,6 +40,11 @@
         <td th:text="${cartItem.item.id}"></td>
         <td th:text="${cartItem.item.name}"></td>
         <td th:text="${cartItem.quantity}"></td>
+        <td>
+            <form th:method="delete" th:action="@{'/remove/' + ${cartItem.item.id}}">
+                <input type="submit" value="-1"/>
+            </form>
+        </td>
     </tr>
     </tbody>
 </table>
