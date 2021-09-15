@@ -24,3 +24,35 @@ logging:
       gregturnquist: debug
     # web 로깅 그룹 로깅 활성화
     web: debug
+
+# 액추에이터 설정
+management:
+  endpoint:
+    health:
+      # 서버 상태 세부정보 표시 설정
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        # 모든 액추에이터 엔드포인트를 웹으로 공개
+        include: '*'
+        # 공개할 엔드포인트를 명시적으로 지정
+        #include: auditevents,beans,caches,conditions,configprops,env,flyway,health,heapdump,httptrace,info,logfile,loggers,metrics,mappings,shutdown,threaddump
+      # 액추에이터 루트 엔드 포인트 변경
+      #base-path: /
+      # 액추에이터 상세 경로 변경
+      #path-mapping:
+      #  loggers: logs
+
+# 애플리케이션 버전 정보 추가
+info:
+  project:
+    name: ${rootProject.name}
+    group: ${group}
+    version: ${version}
+    #springProperty: \${spring-boot.version}
+  java:
+    version: \${java.version}
+  spring:
+    boot:
+      version: ${ext.springBootVersion}

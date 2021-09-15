@@ -1,6 +1,16 @@
+
+buildscript {
+    ext {
+        springBootVersion = '2.5.4'
+    }
+}
+
 plugins {
-    id 'org.springframework.boot' version '2.5.4'
+
+    id 'org.springframework.boot' version "$springBootVersion"
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    // https://plugins.gradle.org/plugin/com.gorylenko.gradle-git-properties
+    id "com.gorylenko.gradle-git-properties" version "2.3.1"
     id 'java'
 }
 
@@ -8,20 +18,40 @@ group = 'com.greglturnquist'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '11'
 
+processResources {
+    filesMatching('application.yml') {
+        expand(project.properties)
+    }
+}
+
 repositories {
     mavenCentral()
+}
+
+// https://docs.spring.io/spring-boot/docs/current/gradle-plugin/reference/htmlsingle/
+// 빌드 파일에서 계층형 JAR 사용하도록 지정
+bootJar {
+    layered {
+        enabled = true
+    }
+}
+
+// plain.jar 생성취소
+jar {
+    enabled = false
 }
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
-    // MongoDB 테스트DB
+    implementation 'org.springframework.boot:spring-boot-starter-actuator:2.5.4'
+
     implementation 'org.mongodb:mongodb-driver-sync'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     // 블록하운드 의존관계 추가
     //implementation 'io.projectreactor.tools:blockhound:1.0.6.RELEASE'
-
+    // MongoDB 테스트DB
     implementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
@@ -31,5 +61,6 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
+//    useJUnitPlatform()
+    exclude ("**")
 }
