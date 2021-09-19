@@ -694,6 +694,7 @@ info:
 Gradle  
 참고: https://nevercaution.github.io/spring-boot-use-gradle-value/  
 참고: https://tristanfarmer.dev/blog/gradle_property_expansion_spring_boot  
+참고: https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#howto.properties-and-configuration
 gradle 에서 properties 정보를 사용하기 위해 아래와 같이 설정
 ```groovy
 buildscript {
@@ -1060,3 +1061,290 @@ management:
 - 애플리케이션 정보 및 빌드 정보 변경
 - HTTP 트레이스 데이터를 몽고디비에 저장하고 조회하는 코드 작성
 - 관리 서비스 경로 변경
+
+# PART 6. 스프링 부트 API 서버 구축
+- JSON 기반 웹 서비스 구축
+- 스프링 REST Docs을 활용한 API 문서화
+- 스프링 부트로 만든 API 포털에서 다양한 API 제공
+- 스프링 HATEOAS를 사용한 하이퍼미디어 활용
+- API 포털에 하이퍼미디어 링크 추가
+
+## HTTP 웹 서비스 구축
+
+`thenReturn()` 메소드는 스프링 웹의 `ResponseEntity.ok()` 헬퍼 메소드를 사용해서 교체 후 데이터를 HTTP 200 OK와 함께 반환한다
+
+스프링 데이터에서 제공하는 `save()`나 `delete()` 메소드를 사용하고 이후에 `then***()` 메소드를 호출할 때는 항상 `flatMap()`을 사용해야 한다  
+그렇지 않으면 저장도 삭제도 되지 않는다  
+`flatMap()`을 사용해서 결괏값을 꺼내야 데이터 스토어에도 변경이 적용된다  
+
+## API 포털 생성
+
+Spring REST Docs은 API 문서화 작업을 도와준다  
+사용자가 직접 사용해볼 수 있는 API 예제를 포함해서 API 문서를 쉽게 만들어낼 수 있다  
+여러 분야에서 사용성이 입증된 Asciidoctor 문서화 도구를 사용해서 세부 내용도 쉽게 문서로 만들 수 있다  
+
+### API 문서화를 위한 asciidoc 사용 설정
+Asciidoc는 표준이고 Asciidoctor는 Asciidoc 표준을 Ruby 언어로 구현한 프로젝트이다
+
+`asciidoctor-maven-plugin`은 확장자가 .adoc인 Asciidoc 파일을 HTML로 변환해준다  
+**Spring REST Docs**는 `Asciidoc`파일의 주요 내용을 자동으로 생성해준다  
+최종 HTML은 `target/generated-docs`에 저장된다
+
+Maven
+```xml
+<plugin>
+  <groupId>org.asciidoctor</groupId>
+  <artifactId>asciidoctor-maven-plugin</artifactId>
+  <version>2.2.1</version>
+  <executions>
+    <execution>
+      <id>generate-docs</id>
+      <phase>prepare-package</phase>
+      <goals>
+        <goal>process-asciidoc</goal>
+      </goals>
+      <configuration>
+        <backend>html</backend>
+        <doctype>book</doctype>
+      </configuration>
+    </execution>
+  </executions>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.restdocs</groupId>
+      <artifactId>spring-restdocs-asciidoctor</artifactId>
+      <version>${spring-restdocs.version}</version>
+    </dependency>
+  </dependencies>
+</plugin>
+```
+
+Gradle
+참조: https://subji.github.io/posts/2021/01/06/springrestdocsexample
+참조: https://gaemi606.tistory.com/entry/Spring-Boot-REST-Docs-%EC%A0%81%EC%9A%A9%ED%95%98%EA%B8%B0
+참조: https://velog.io/@hydroniumion/BE1%EC%A3%BC%EC%B0%A8-Spring-Rest-Docs-%EC%A0%81%EC%9A%A9%EA%B8%B0
+참조: https://jaehun2841.github.io/2019/08/04/2019-08-04-spring-rest-docs/
+참조: https://beemiel.tistory.com/13
+참조(Kotlin): https://dwony26.tistory.com/134
+최신버전 참조: https://velog.io/@max9106/Spring-Spring-rest-docs%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%9C-%EB%AC%B8%EC%84%9C%ED%99%94
+최신버전 참조: https://eclipse4j.tistory.com/364
+최신버전 참조(많은 도움됨): https://huisam.tistory.com/entry/RESTDocs
+최신버전 참조(많은 도움됨): https://hhseong.tistory.com/212
+Spring REST Docs: https://docs.spring.io/spring-restdocs/docs/current/reference/html5/
+Asciidoctor Gradle Plugin Document: https://asciidoctor.github.io/asciidoctor-gradle-plugin/master/user-guide/
+Asciidoc 기본 사용법: https://narusas.github.io/2018/03/21/Asciidoc-basic.html
+Gradle Docs: https://plugins.gradle.org/plugin/org.asciidoctor.jvm.convert
+우아한형제들 Spring Rest Docs 적용: https://techblog.woowahan.com/2597/
+```groovy
+plugins {
+  ..
+  // gradle 7 부터는 org.asciidoctor.convert가 아닌asciidoctor.jvm.convert를 사용
+  id "org.asciidoctor.jvm.convert" version "3.3.2"
+}
+
+ext {
+  // Snippet 의 생성 위치를 지정
+  set('snippetsDir', file('build/generated-snippets'))
+}
+
+// asciidoctor 추가
+asciidoctor {
+  attributes 'snippets': snippetsDir // adoc 파일 생성시 올바르게 include하기 위함
+  // Snippets 디렉토리를 Input 디렉토리로 설정
+  inputs.dir snippetsDir
+  // 문서 생성 전 테스트가 실행되도록 test 에 종속 설정
+  dependsOn test
+}
+// 기존에 존재하는 docs를 삭제
+asciidoctor.doFirst {
+  delete file('src/main/resources/static/docs')
+}
+// build/docs/asciidoc 파일을 src/main/resources/static/docs로 복사해준다
+task copyDocument(type: Copy) {
+  dependsOn asciidoctor
+  from file("build/docs/asciidoc/")
+  into file("src/main/resources/static/docs")
+}
+
+// https://docs.spring.io/spring-boot/docs/current/gradle-plugin/reference/htmlsingle/
+// 빌드 파일에서 계층형 JAR 사용하도록 지정
+bootJar {
+  // bootJar 설정. 스니펫을 이용해 문서 작성 후, build - docs - asciidoc 하위에 생기는
+  dependsOn asciidoctor
+  // 생성된 문서를 static/docs 에 복사
+  copy {
+    from "${asciidoctor.outputDir}" // gradle은 src/docs/asciidoc 에 메인 adoc 파일을 직접 생성해주어야함
+    into 'src/main/resources/static/docs' // asciidoctor로 만든 문서는 static/docs 디렉토리로
+  }
+}
+
+
+build {
+  dependsOn copyDocument
+}
+
+test {
+  useJUnitPlatform()
+  // Snippets 디렉토리를 출력으로 작업하도록 설정
+  outputs.dir snippetsDir
+}
+```
+
+**Spring REST Docs**는 기본적으로 `src/main/asciidoc`에서 Asciidoc 파일을 읽어서 주요 내용을 자동을 생성하므로  
+`src/main/asciidoc/index.adoc` 파일을 만들고 새 API 포털의 도입부를 직접 작성해야 한다
+
+### spring-restdocs-webtestclient 의존관계 추가
+Spring WebFlux Controller를 테스트할 수 있게 해준다
+
+Maven
+```xml
+<dependency>
+    <groupId>org.springframework.restdocs</groupId>
+    <artifactId>spring-restdocs-webtestclient</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+Gradle
+```groovy
+dependencies {
+    // Maven 과 같이 test Scope 에 대한 mockMvc 의존성을 추가 (WebClient, Assured 사용가능)
+    // restassured를 사용하려면 restassured 의존성을 넣어주면된다
+    testImplementation 'org.springframework.restdocs:spring-restdocs-webtestclient'
+}
+```
+
+실행이 성공적으로 완료되면 다음 내용을 포함하는 문서 조각(snippet)이 생성됨
+
+- cURL, HTTPie 형식에 맞는 요청 명령
+- HTTP 형식에 맞는 요청 및 응답 메시지
+- JSON 형식으로 된 요청 본문
+- JSON 형식으로 된 응답 본문
+
+snippet 파일들은 `document()` 메소드의 첫 번째 문자열로 지정해준 서브 디렉터리 아래에 생성됨
+
+- Maven: `target/generated-snippets`
+- Gradle: `build/generated-snippets`
+
+`http://localhost:8080/docs/index.html` 에 접속하면 생성된 **Spring REST Docs 문서**를 볼 수 있다
+
+**Spring REST Docs**은 API 문서를 다듬을 수 있는 요청 전처리기인 `preprocessRequest`와 응답 전처리기인 `preprocessResponse`를 제공한다
+
+| 전처리기                                              | 설명                                                         |
+| ----------------------------------------------------- | ------------------------------------------------------------ |
+| `prettyPrint()`                                       | 요청이나 응답 메시지에 줄바꿈, 들여쓰기 등 적용              |
+| `removeHeaders(String... headerNames)`                | 표시하지 않을 헤더 이름 지정<br />스프링의 HttpHeaders 유틸 클래스에 표준 헤더 이름이 상수로 등록돼 있으므로 함께 사용하면 편리하다 |
+| `removeMatchingHeaders(String... headerNamePatterns)` | 표시하지 않을 헤더를 정규 표현식으로 지정                    |
+| `maskLinks()`                                         | href 링크 항목 내용을 `...`로 대체<br />HAL(Hypertext Application Language)을 적용할 때 API 문서에 하드코딩된 URI 대신 링크를 통해 API 사용을 독려하기 위해 URI 링크를 '...'로 대체한다 |
+| `maskLinks(String mask)`                              | href 항목을 대체할 문자열 명시                               |
+| `replacePattern(Pattern pattern, String replacement)` | 정규 표현식에 매칭되는 문자열을 주어진 문자열로 대체         |
+| `modifyParameters()`                                  | 평문형 API(fluent API)를 사용해서 요청 파라미터 추가, 변경, 제거 |
+| `modifyUris()`                                        | 평문형 API를 사용해서 로컬 환경에서 테스트할 때 API 문서에 표시되는 URI 지정 |
+
+**Spring REST Docs**을 사용하는 테스트 케이스에서는 mock을 통해 지정한 테스트 데이터가 API 문서에도 표시된다  
+따라서 여러 API에 걸쳐 일관성 있는 내용이 표시되도록 테스트 데이터를 구성하는 것이 좋다
+
+## API 진화 반영
+
+장자끄 뒤브레 '버저닝 비용 이해(Understanding the Costs of Versioning)' 논문에서 세가지 API 변경 유형을 설명한다
+
+- `매듭(knot)`: 모든 API 사용자가 단 하나의 버전에 묶여 있다
+  API가 변경되면 모든 사용자도 함꼐 변경을 반영해야 하므로 엄청난 여파를 몰고 온다
+- `점대점(point-to-point)`: 사용자마다 별도의 API 서버를 통해 API를 제공한다
+  사용자별로 적절한 시점에 API를 변경할 수 있다
+- `호환성 버저닝(compatible versioning)`: 모든 사용자가 호환 가능한 하나의 API 서비스 버전을 사용한다
+
+## 하이퍼미디어 기반 웹 서비스 구축
+링크를 따라 여러 문서를 오가면서 데이터를 활용할 수 있는 하이퍼미디어를  
+API에 추가하면 더 유연하게 API를 진화시킬 수 있다
+
+하이퍼미디어를 직접 작성하려면 비용이 많이든다  
+그래서 이런 비용을 줄이기 위해 Spring HATEOS가 만들어졌다  
+Spring HATEOS는 Spring WebFlux도 지원하며 서비스를 아주 쉽고 신속하게 하이퍼미디어 형식으로 표현할 수 있도록 도와준다
+
+조회한 정보 전체를 교체(PUT)하거나, 일부를 변경(PATCH)하거나, 삭제(DELETE)할 수 있는 링크를 제공한다면  
+사용자가 쉽게 해당 작업을 수행할 수 있다
+
+### Spring HATEOS 의존관계 추가
+
+스프링 MVC를 지원하는 용도로 만들어져서 스프링 MVC와 Tomcat을 사용할 수 있게 해주는 `spring-boot-starter-web` 이 포함돼어 있다  
+Spring WebFlux와 Reactor Netty를 사용하는 웹 서비스를 만들고 있으므로 제외시킨다
+
+MAVEN
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-hateoas</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+```
+
+Gradle
+```groovy
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-hateoas"){
+      exclude group: 'org.springframework.boot', module: 'spring-boot-starter-web'
+    }
+}
+```
+
+하이퍼미디어 링크를 만들 때는 가장 먼저 도메인 객체와 링크를 조합해야 한다  
+이작업을 쉽게 할 수 있도록 **Spring HATEOS**는 vendor-neutral 모델을 제공한다
+
+- `RepresentationModel`: 링크 정보를 포함하는 도메인 객체를 정의하는 기본 타입
+- `EntityModel`: 도메인 객체를 감싸고 링크를 추가할 수 있는 모델 `RepresentationModel`을 상속받는다
+- `CollectionModel`: 도메인 객체 컬렉션을 감싸고 링크를 추가할 수 있는 모델 `RepresentationModel`을 상속받는다
+- `PageModel`: 페이징 관련 메타데이터를 포함하는 모델 `CollectionModel`을 상속받는다
+
+**Spring HATEOS**는 이 네 가지 모델과 `Link`, `Links` 객체를 기반으로 하이퍼미디어 기능을 제공한다
+
+## 하이퍼미디어의 가치
+데이터와 데이터 사용 방법에 대한 정보도 함께 제공하기 위해 하이퍼미디어를 사용한다  
+그래서 하이퍼미디어 문서에 데이터에 대한 설명을 여러 가지 JSON 형식으로 제공하는 profile link가 종종 포함되기도 한다  
+proflie link에 포함된 링크는 자바스크립트 라이브러리가 자동으로 생성/수정 입력 폼을 만드는데 사용될 수 있다
+
+**Spring HATEOS**는 ALPS(Application-Level Profile Semantics)(http://alps.io)도 지원한다  
+ALPS를 사용하는 웹 메소드를 작성하면 자신만의 프로파일을 만들어서 사용할 수도 있다
+
+클라이언트가 직접적으로 도메인 지식에 의존하는 대신에 프로토콜에만 의존하게 만들면  
+예를 들어 클라이언트가 주문에 대한 지식을 직접 사용하지 말고 단순히 링크를 읽고 따라가게 만든다면  
+클라이언트는 백엔드의 변경에서 유발되는 잠재적인 문제를 피해갈 수도 있다
+
+웹 사이트 변경이 웹 브라우저의 업데이트를 유발하지 않는다는 순수한 사실은 서버 쪽에서 변경이 발생해도  
+클라이언트에 여ㅇ향을 미치지 않게 만드는 것이 가능하다는 증거가 된다
+
+Roy Fielding 박사가 논문에서 제안한 개념이 적용된 API는 하위 호환성을 갖게 된다  
+이런 API를 사용하면 시간이 지남에 따라 유지 관리에 드는 총 비용을 절감할 수 있다
+
+## API에 행동 유도성 추가
+동일한 URI를 가리키는 GET과 PUT을 함께 담으면 HAL 문서는 한 개의 링크만 생성한다  
+그 결과 사용자는 원래는 GET, PUT 두 가지의 서로 다른 선택지가 존재했었다는 사실을 알 수 없게 된다
+
+GET과 PUT을 다른 링크로 표현하도록 강제하더라도 클라이언트가 PUT 요청을 보내려면 어떤 속성 정보를 제공해야하는지  
+클라이언트에 알려주지 않는다  
+바로 이 지점에서 **Spring HATEOS**가 하이퍼미디어에 행동 유도성(affordance)을 추가한 API를 제공해준다
+
+하나의 Item을 보여줄 때, 그 Item을 수정할 수 있는 행동 유도성을 추가해주는 것이 전형적인 사례이다  
+**Spring HATEOS**는 관련 있는 메소드를 연결할 수 있는 수단을 제공한다  
+Item 사례에서는 GET 연산에 대한 링크가 PUT 연산으로 이어질 수 있다
+
+HAL로 표현되면 여전히 하나의 링크만 표시된다  
+하지만 HAL-FORMS 같은 하이퍼미디어 형식은 추가 정보를 렌더링할 수 있는 연결 정보도 보여줄 수 있다  
+행동 유도성을 추가할 수 있는 어떤 미디어 타입이라도 이런 메타데이터를 제공할 수 있다는 장점이 있다
+
+> 행동 유도성 관점에서는 실제 데이터를 전부 제공하는 것이 중요하지 않다
+> 하지만 가능하다면 id 필드 같은 정보를 제공하는 것이 좋다
+> 그래야 PathVariable를 사용하는 하위 링크를 만들 수 있다
+
+## 6장에서 배운 내용
+- 원격 접근을 통해 시스템을 변경하는 API 생성
+- **Spring REST Docs**을 사용해서 API 문서화 포털을 만드는 테스트 작성
+- HAL 기반 링크 정보를 포함하는 하이퍼키디어 제공 컨트롤러 작성
+- 링크 정보 및 관련 세부정보를 추가해서 문서화 테스트 보완
+- 행동 유도성 소개 및 HAL-FORMS 형식 데이터와 데이터 템플릿 제공
+- Asciidoc snippet을 합쳐서 API 문서화 포털 구축

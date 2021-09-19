@@ -21,6 +21,14 @@ public class InventoryService {
         this.cartRepository = cartRepository;
     }
 
+    public Flux<Cart> getAllCarts() {
+        return this.cartRepository.findAll();
+    }
+
+    public Mono<Cart> newCart() {
+        return this.cartRepository.save(new Cart("cart"));
+    }
+
     public Mono<Cart> getCart(String cartId) {
         return this.cartRepository.findById(cartId);
     }
@@ -43,51 +51,39 @@ public class InventoryService {
      * @param itemId
      * @return
      */
-    // tag::logging[]
     Mono<Cart> addItemToCart(String cartId, String itemId) {
-        return this.cartRepository.findById(cartId) //
-                .log("foundCart") //
+        return this.cartRepository.findById(cartId)
                 .defaultIfEmpty(new Cart(cartId)) //
-                .log("emptyCart") //
-                .flatMap(cart -> cart.getCartItems().stream() //
-                        .filter(cartItem -> cartItem.getItem() //
-                                .getId().equals(itemId))
+                .flatMap(cart -> cart.getCartItems().stream()
+                        .filter(cartItem -> cartItem.getItem().getId().equals(itemId))
                         .findAny() //
                         .map(cartItem -> {
                             cartItem.increment();
-                            return Mono.just(cart).log("newCartItem");
+                            return Mono.just(cart);
                         }) //
-                        .orElseGet(() -> {
-                            return this.itemRepository.findById(itemId) //
-                                    .log("fetchedItem") //
-                                    .map(item -> new CartItem(item)) //
-                                    .log("cartItem") //
-                                    .map(cartItem -> {
-                                        cart.getCartItems().add(cartItem);
-                                        return cart;
-                                    }).log("addedCartItem");
-                        }))
-                .log("cartWithAnotherItem") //
-                .flatMap(cart -> this.cartRepository.save(cart)) //
-                .log("savedCart");
+                        .orElseGet(() -> this.itemRepository.findById(itemId) //
+                                .map(item -> new CartItem(item)) //
+                                .map(cartItem -> {
+                                    cart.getCartItems().add(cartItem);
+                                    return cart;
+                                })))
+                .flatMap(cart -> this.cartRepository.save(cart));
     }
-    // end::logging[]
 
     Mono<Cart> removeOneFromCart(String cartId, String itemId) {
-        return this.cartRepository.findById(cartId) //
-                .defaultIfEmpty(new Cart(cartId)) //
-                .flatMap(cart -> cart.getCartItems().stream() //
-                        .filter(cartItem -> cartItem.getItem() //
-                                .getId().equals(itemId))
-                        .findAny() //
+        return this.cartRepository.findById(cartId)
+                .defaultIfEmpty(new Cart(cartId))
+                .flatMap(cart -> cart.getCartItems().stream()
+                        .filter(cartItem -> cartItem.getItem().getId().equals(itemId))
+                        .findAny()
                         .map(cartItem -> {
                             cartItem.decrement();
                             return Mono.just(cart);
                         }) //
-                        .orElse(Mono.empty())) //
-                .map(cart -> new Cart(cart.getId(), cart.getCartItems().stream() //
-                        .filter(cartItem -> cartItem.getQuantity() > 0) //
-                        .collect(Collectors.toList()))) //
+                        .orElse(Mono.empty()))
+                .map(cart -> new Cart(cart.getId(), cart.getCartItems().stream()
+                        .filter(cartItem -> cartItem.getQuantity() > 0)
+                        .collect(Collectors.toList())))
                 .flatMap(cart -> this.cartRepository.save(cart));
     }
 }
