@@ -1348,3 +1348,194 @@ HAL로 표현되면 여전히 하나의 링크만 표시된다
 - 링크 정보 및 관련 세부정보를 추가해서 문서화 테스트 보완
 - 행동 유도성 소개 및 HAL-FORMS 형식 데이터와 데이터 템플릿 제공
 - Asciidoc snippet을 합쳐서 API 문서화 포털 구축
+
+# PART 7. 스프링 부트 메시징
+- 스프링 부트에서 지원하는 다양한 메시징 솔루션
+- 스프링 부트에서 직접 지원하지는 않지만 스프링 포트폴리오에서 지원하는 다양한 메시징 솔루션
+- AMQP(Advanced Message Queuing Protocol)를 자세히 알아보고, 스프링 AMQP와 프로젝트 리액터를 활용해 웹 계층과 백엔드의 결합 관계 해소
+
+## 메시징 솔루션 선택
+메시징 솔루션은 JMS(Java Messaging Service), Apache Kafka, AMQP, Redis, GemFire, Apache Geode 등 매우 다양하다
+메시징을 활용하고 리액티브 스트림 프로그래밍에 적절히 통합하는 방법을 다룬다
+
+## 익숙한 패턴을 사용한 문제 해결
+템플릿 패턴은 너무 강력해서 MainSender, JndiTemplate, HibernateTemplate, JdoTemplate등 여러 영역에서 두루 사용되고 있다
+
+다음과 같은 비동기 메시징에서도 사용된다
+
+- **JMS**: 자바 표준 메시징 API, 스프링 프레임워크는 JMS broker를 사용한 메시지 송신과 수신을 쉽게 처리할 수 있도록
+  **JmsTemplate**과 **DefaultMessageListenerContainer**를 제공한다
+- **Apache Kafka**: 빠른 속도로 대세로 자리 잡고 있는 브로커
+  **Spring for Apache Kafka**는 **Apache Kafka**를 사용한 메시지 송신과 수신을 쉽게 처리할 수 있도록
+  **KafkaTemplate**과 **KafkaMessageListenerContainer**를 제공한다
+- **RabbitMQ**: 높은 처리량과 강한 회복력이 특징인 메시지 브로커, **스프링 AMQP**는 **RabbitMQ**를 사용한 메시지 송신과 수신을 쉽게 처리할 수 있도록
+  **AmqpTemplateSimpleMessageListenerContainer**를 제공한다
+- **Redis**: 빠른 속도를 무기로 가장 널리 사용되는 브로커
+  **Spring Data Redis**는 **Redis**를 사용하는 메시지 송신과 수신을 쉽게 처리할 수 있도록 **RedisMessageListenerContainer**를 제공한다
+  
+## 손쉬운 테스트
+Testcontainers(https://testcontainers.org)는 Docker를 활용하는 자바 테스트 지원 라이브러리이다  
+테스트컨테이너는 도커에서 실행될 수만 있다면, 어떤 데이터베이스나 메시지 브로커, 서드파티 시스템도 테스트용으로 쉽게 쓸 수 있다  
+테스트가 종료되면 테스트에 사용됐던 여러 컨테이너 자원도 남김없이 깔끔하게 종료된다  
+
+### 테스트컨테이너 버전 지정
+테스트가 종료되면 별도로 신경 쓰지 않아도 테스트에 사용된 컨테이너도 함께 종료된다
+
+Maven
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-bom</artifactId>
+            <version>1.16.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>rabbitmq</artifactId>
+        <scope>test</scope>
+    </dependency>
+    
+    <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```
+
+Gradle
+```groovy
+dependencies {
+    // Testcontainer 버전 지정
+    implementation platform('org.testcontainers:testcontainers-bom:1.16.0')
+    // RabbitMQ Testcontainer 의존관계 추가
+    testImplementation 'org.testcontainers:rabbitmq'
+    // Junit 5와 함께 사용하기 위해 추가
+    testImplementation 'org.testcontainers:junit-jupiter'
+}
+```
+
+## 테스트컨테이너 사용 테스트
+지금까지 프로젝트 리액터를 사용하는 테스트에서는 **StepVerifier**를 사용해서 비동기 처리 흐름을 쉽게 테스트할 수 있엇고 지연효과를 흉내 낼 수도 있었다  
+하지만 **RabbitMQ**를 사용하는 테스트에서는 **RabbitVerifier** 같은 것이 없어서 `Thread.sleep()`을 사용해야 한다
+
+> 스프링 팀에서는 일반적으로 생성자 주입(constructor injection) 방식으로 컴포넌트를 주입하는 것을 권장하지만
+> 테스트에서는 수명주기가 다르므로 생성자 주입이 아니라 필드 주입(field injection)을 사용해도 괜찮다
+
+### 테스트 케이스 구성
+웹 컨트롤러가 처리해야 할일
+
+1. 새 Item 객체를 생성하기 위해 Item 데이터가 담겨 있는 HTTP POST 요청을 받는다
+2. Item 데이터를 적절한 메시지로 변환한다
+3. Item 생성 메시지를 브로커에 전송한다
+
+메시지를 브로커 쪽에서 해야 할 일
+
+1. 새 메시지를 받을 준비를 하고 기다린다
+2. 새 메시지가 들어오면 꺼내서
+3. 몽고디비에 저장한다
+
+Spring AMQP 추가
+
+MAVEN
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-amqp</artifactId>
+</dependency>
+```
+
+Gradle
+```groovy
+// Spring AMQP 추가
+implementation 'org.springframework.boot:spring-boot-starter-amqp'
+```
+
+RabbitMQ API는 작업 수행 중 현재 스레드를 블록한다  
+결국에는 비동기 처리 과정으로 되돌아가더라도 어떤 API가 현재 스레드를 블로킹한다면 블로킹 API다
+
+## 스케줄러를 사용해서 블로킹 API 감싸기
+작업 수행 단계 중에 블로킹 API 호출이 포함된다면 리액터에게 알려서 블로킹 API를 별도의 스레드에서 호출하게 해야  
+의도하지 않은 스레드 낭비를 방지할 수 있다
+
+리액터는 다음과 같이 여러 방법으로 스레드를 사용할 수 있다
+
+- `Schedulers.immediate()`: 현재 스레드
+- `Schedulers.single()`: 재사용 가능한 하나의 스레드
+  현재 수행 중인 리액터 플로우뿐만 아니라 호출되는 모든 작업이 동일한 하나의 스레드에서 실행된다
+- `Schedulers.newSingle()`: 새로 생성한 전용 스레드
+- `Schedulers.boundedElastic()`: 작업량에 따라 스레드 숫자가 늘어나거나 줄어드는 신축성 있는 스레드풀
+- `Schedulers.paraller()`: 병렬 작업에 적합하도록 최적화된 고정 크기 워커 스레드 풀
+- `Schedulers.fromExecutorService()`: ExecuterService 인스턴스를 감싸서 재사용
+
+> single(), newSingle(), paraller()은 논블로킹 작업에 사용되는 스레드를 생성한다
+> 이 세 가지 스케줄러에 의해 생성되는 스레드는 리액터의 NonBlocking 인터페이스를 구현한다
+> 따라서 block(), blockFirst(), blockLast() 같은 블로킹 코드가 사용되면 IllegalStateException이 발생한다
+
+리액터 플로우에서 스케줄러를 변경하는 방법 두가지
+
+- `publishOn()`: 호출되는 시점 이후로는 지정한 스케줄러를 사용한다
+  이 방법을 사용하면 사용하는 스케줄러를 여러 번 바꿀 수도 있다
+- `subscribeOn()`: 플로우 전 단계에 걸쳐 사용되는 스케줄러를 지정한다
+  플로우 전체에 영향을 미치므로 `publishOn()`에 비해 영향 범위가 더 넓다
+
+## 컨슈머 작성
+가장 단순한 방식은 `AmqpTemplate.receive(queueName)`이지만 가장 좋은 방식이라고 할 순 없다  
+특히 부하가 많은 상황에서는 적합하지 않다  
+더 많은 메시지를 polling 방식으로 처리할 수도 있고 콜백을 등록해서 처리할 수도 있지만  
+`@RabbitListener`를 사용하는 것이 가장 유연하고 편리하다
+
+### 익명 큐(anonymous queue)와 이름 있는 큐(named queue)의 차이
+동일한 메시지를 여러 컨슈머가 사용해야 하는 상황에서는 용도에 맞게 설정하는 것이 중요하다  
+만약 2개의 컨슈머가 동일한 큐를 사용하도록 설정되면 하나의 메시지는 두 컨슈머 중 하나의 컨슈머만 접근해서 사용할 수 있다  
+하나의 큐에 있는 메시지는 하나의 클라이언트에 의해서만 소비될 수 있다  
+동일한 라우팅 키를 사용하는 하나의 익스체인지에 2개의 컨슈머가 연결돼 있지만 각자 다른 큐를 사용한다면  
+하나의 메시지가 다른 큐에 복제되므로 메시지 발행자 쪽을 변경하지 않고도 2개의 컨슈머가 모두 해당 메시지를 사용할 수 있다  
+
+`@RabbitListener` 애너테이션을 메소드에 붙이면 Spring AMQP가 가능한 한 가장 효율적인 캐시 및 풀링 메커니즘을 적용하고   
+백그라운드에서 리스너를 등록한다  
+
+### Serializable을 피하는 것이 중요하다
+역직렬화가 자바에 포함돼 있는 여러 보안 검사를 우회한다는 것은 잘 알려져 있다  
+그래서 예전부터 다양한 보안 공격에 활용돼왔고 자바 개발 진영에게는 필요악과도 같은 존재다  
+오라클의 자바 플랫폼 수석 아키텍트인 마크 레이놀드(Mark Reinhold)는  
+Serializable을 1997년에 만들어진 끔찍한 실수라고 얘기하며 자바 명세에서 제외하고 싶다고 주장해왔다  
+Serializable을 사용하는 것 보다는 Jackson 같은 라이브러리를 사용해서 더 엄격하게 제어하는 것이 더 낫다  
+그래서 Jackson 을 사용해서 성능 저하가 발생한다는 확실한 벤치마크 결과가 나오지 않는 한  
+일반적ㅇ로 Serializable 대신에 Jackson을 사용할 것을 추천한다
+
+### 리액터, RabbitMQ, 스프링 데이터의 협업과정을 확인하기 위한 로그 설정 추가
+```yaml
+logging:
+  level:
+    org:
+      springframework:
+        amqp: DEBUG
+        messaging: DEBUG
+        data: DEBUG
+    com:
+      greglturnquist:
+        hackingspringboot: DEBUG
+    reactor: DEBUG
+```
+
+### 비동기 메시징 솔루션의 핵심 개념
+- 블로킹 API는 감싸서 별도의 스레드에서 실행
+- 하나의 메시지 발행
+- 하나 혹은 둘 이상의 컨슈머가 메시지 소비
+- 스프링 포트폴리오에 포함된 **RabbitTemplate, RabbitMessageTemplate, AmquTemplate, JmsTemplate, KafkaTemplate**등 다양한 템플릿 활용
+
+## 7장에서 배운 내용
+- **TestContainer**, **RabbitMQ**, **Spring AMQP** 설정
+- 웹과 백엔드가 예상대로 동작하는지 검증하는 테스트 작성
+- 동기적 웹 요청을 받아서 처리하는 웹플럭스 컨트롤러 작성
+- 블로킹 API 호출부를 감싸서 리액터의 엘라스틱 스레드 풀에서 실행
+- **RabbitTemplate**를 사용해서 비동기 메시지 브로커를 통해 메시지 전송
+- `@RabbitListener`를 사용해서 **RabbitMQ Listener**를 설정하고 전송받은 메시지를 소비
