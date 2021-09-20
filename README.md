@@ -1673,3 +1673,137 @@ docker run -p 27017-27019:27017-27019 mongo
 ### 애플리케이션 실행
 R소켓 포트는 7000, 서버 메인 포트는 9000로 구동되며 도메인 객체를 탐색하고  
 몽고디비에 연결한 후에 스프링 부트 액추에이터도 활성화 한다
+
+## R소켓 클라이언트 생성
+R소켓 클라이언트는 외부로부터 HTTP 요청을 받아서 R소켓 연결을 통해 백엔드 서버로 요청을 전달한다  
+그래서 HTTP 요청을 받을 수 있는 WebFlux 컨트롤러가 필요하다
+
+R소켓에 스프링의 메시징 패러다임은 포함되지 않았다  
+**RSocketRequester**를 사용해야 스프링 프레임워크와 연동된다  
+이렇게 하면 도착지를 기준으로 라우팅할 수 있다  
+그리고 보너스로 트래픽의 인코딩/디코딩도 쉽게 할 수 있다  
+**RSocketRequester**를 사용하지 않으면 클라이언트와 서버 양쪽의 모든 R소켓 연결에서 데이털르 직접 관리해야 한다
+
+리액터의 **Mono** 패러다임은 연결을 R소켓 연결 세부정보를 포함하는 지연 구조체로 전환한다  
+아무도 연결하지 않으면 R소켓은 열리지 않는다  
+누군가 구독을 해야 세부정보가 여러 구독자에게 공유될 수 있다
+
+하나의 R소켓만으로 모든 구독자에게 서비스할 수 있다는 점도 중요하다  
+R소켓을 구독자마다 1개씩 만들 필요가 없다  
+대신에 하나의 R소켓 파이프에 대해 구독자별로 하나씩 연결을 생성한다
+
+이렇게 준비 과정을 마쳐야 R소켓이 네트워크를 통해 오가는 데이터 프레임을 리액티브하게 전송하고 배압을 처리하는 데 집중할 수 있다
+
+### 웹플럭스 요청을 R소켓 요청-응답으로 전환
+스프링 웹플럭스와 R소켓 API가 모두 프로젝트 리액터를 사용하는 덕분에 둘을 아주 매끄럽게 함께 사용할 수 있다  
+둘은 하나의 플로우 안에서 체이닝으로 연결될 수 있어서 HTTP 웹요청을 받아서 R소켓 연결에 전달하고 응답을 받아서  
+클라이언트에 리액티브하게 반환할 수 있다
+
+요청-응답 서비스와 클라이언트는 테스트하기도 편리하다
+
+### 웹플럭스 요청을 R소켓 요청-스트림으로 전환
+스트림을 반환해야 하므로 데이터를 `Mono<ResponseEntity>`에 담지 않고 **Flux**에 담아 반환한다  
+미디어 타입도 `application/x-ndjson`으로 지정해야 스트림 방식으로 반환할 수 있다  
+**ndjson**은 **Newline Delimited JSON**의 약자인데 결국 여러 **JSON** 객체를 줄바꿈으로 구분해서 여러 번에 걸쳐 스트림으로 반환한다는 뜻이다
+
+검증 첫 부분에 **StepVerifier**가 나오지 않고 `returnResult()`, `getResponseBody()`를 통해 일단 플로우에서 빠져나온 다음에  
+**StepVerifier**를 사용해서 검증을 시작한다
+
+### 웹플럭스 요청을 R소켓 실행 후 망각으로 전환
+함수형 프로그래밍에서 비어 있는 Void를 무시하는 것은 `map()`이나 `flatMap()`이나 마찬가지다  
+그래서 `Mono<Void>`를 `map()`이나 `flatMap()`을 사용해서 다른 것으로 전환하는 것은 불가능하다
+
+### 웹플럭스 요청을 R소켓 채널로 전환
+R소켓의 양방향 채널 지원을 테스트
+이벤트 흐름을 구독할 수 있는 단일 메시지를 전송하는 예제 
+
+클라이언트 애플리케이션을 재실행하고 터미널에서 `curl -v localhost:8080/items`를 실행하면  
+클라이언트로부터의 결과를 기다린다  
+앞에서 작성한 두 가지 테스트 케이스를 실행하면 `curl` 실행 중인 터미널에 새로 생성된 Item 결과가 표시되는 것을 볼 수 있다
+
+`curl` 명령을 실행하면 R소켓 클라이언트가 **Content-Type** 헤더값이 `text/event-stream`인 스트림을 응답한다  
+스트림 응답을 받으면 `curl`은 전체 결과를 모두 가져올 수 있을 때까지 기다렸다가 모두 받은 후 실행을 종료하는 방식으로 동작하지 않고  
+결괏값이 생길 때 마다 결과를 화면에 표시하고 실행을 종료하지 않고 추가로 응답을 받을 수 있는 대기 상태로 남는다
+
+새 Item을 몽고디비에 저장한 후 요청-응답 방식처럼 반환하고 끝내는 것이 아니라  
+양방향 채널을 통해 결괏값을 지속적으로 보내는 동작 방식을 보여준다
+
+> R소켓 클라이언트 애플리케이션을 재실행하고 앞에서 작성한 요청-응답, 요청-스트림, 실행 후 망각 방식 테스트 케이스를 실행하면서
+> 실질적으로 R소켓 애플리케이션 인스턴스를 또 실행하는 구조라서 불필요하게 복잡해 보인다
+> R소켓 클라이언트 애플리케이션을 재실행하고, 터미널(A)에서 curl -v localhost:8080/items를 실행해서 R소켓 클라이언트로부터 들어오는
+> 스트림을 받을 수 있게 해두고, 별도의 새 터미널(B)에서 ㄷ4ㅏ음 명령을 각각 실행해서 R소켓 클라이언트에 요청을 보내면
+> R소켓 클라이언트 애플리케이션 인스턴스를 1개만 띄우고도 거의 같은 시나리오로 동작한다
+
+A 터미널에서 `curl -v localhost:8080/items`를 실행하면 다음과 같이 응답을 대기한다
+```bash
+$ curl -v localhost:8080/items
+*   Trying ::1...
+* TCP_NODELAY set
+* Connected to localhost (::1) port 8080 (#0)
+> GET /items HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/7.64.1
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< transfer-encoding: chunked
+< Content-Type: text/event-stream;charset=UTF-8
+<
+```
+
+B 터미널에서 다음과 같이 **요청-응답** 쪽에 Item 생성 요청을 전송하면 다음과 같이 생성된 Item 데이터가 결과로 표시된다
+```bash
+$ curl -X POST -H "Content-Type:application/json" localhost:8080/items/request-response -d "{\"name\":\"Alf alarm clock\",\"description\":\"nothing important\",\"price\":19.99}"
+{"id":"6148b752e2921e0fdafa7475","name":"Alf alarm clock","description":"nothing important","price":19.99}%
+```
+
+A 터미널에도 다음과 같이 생성된 Item 데이터가 결과로 표시된다
+```bash
+< HTTP/1.1 200 OK
+< transfer-encoding: chunked
+< Content-Type: text/event-stream;charset=UTF-8
+< 
+data:{"id":"6148a9dde2921e0fdafa7472","name":"Alf alarm clock","description":"nothing important","price":19.99}
+```
+
+B 터미널에 다음과 같이 **실행 후 망각** 쪽으로 Item 생성 요청을 전송하면 Item 데이터 없이 헤더 정보만 결과로 표시 된다
+```bash
+$ curl -X POST -H "Content-Type:application/json" -i localhost:8080/items/fire-and-forget -d "{\"name\":\"Smurf TV tray\",\"description\":\"kids TV tray\",\"price\":24.99}"
+HTTP/1.1 201 Created
+Location: /items/fire-and-forget
+content-length: 0
+```
+
+A 터미널에도 다음과 같이 생성된 Item 데이터가 결과로 표시된다
+```bash
+< HTTP/1.1 200 OK
+< transfer-encoding: chunked
+< Content-Type: text/event-stream;charset=UTF-8
+< 
+data:{"id":"6148a9dde2921e0fdafa7472","name":"Alf alarm clock","description":"nothing important","price":19.99}
+
+data:{"id":"6148b892e2921e0fdafa7476","name":"Smurf TV tray","description":"kids TV tray","price":24.99}
+```
+
+이제 B 터미널에서 **요청-스트림** 조회 요청을 전송하면 앞에서 저장된 2건의 Item 정보가 1초에 1개씩 표시되는 것을 확인할 수 있다
+```bash
+$ curl -H "Accept:application/x-ndjson" localhost:8080/items/request-stream
+{"id":"6148b64be2921e0fdafa7473","name":"Alf alarm clock","description":"nothing important","price":19.99}
+{"id":"6148b892e2921e0fdafa7476","name":"Smurf TV tray","description":"kids TV tray","price":24.99}
+```
+
+A 터미널에서는 2건의 Item 정보가 한 번에 표시된다  
+왜냐하면 A 터미널에 표시되는 **/items** 쪽에는 `delayElements()`를 추가하지 않았기 때문이다
+
+예제는 한쪽에서 요청을 보내고 다른 한쪽은 응답을 반환하고 있지만 실제로는 양방향이기 때문에  
+양쪽 모두 서로에게 요청을 보내고 응답을 받을 수 있다
+
+> 예제 코드에서는 R소켓 사용 방식을 URI에 포함했지만 실제 애플리케이션에서는 fire-and-forget이나 request-response 같은 이름을
+> URI로 사용하지는 않을 것이다
+> 대신에 newItem.save 같은 비즈니스 기능을 이름으로 사용해서 의도를 더 분명히 나타낼 수 있다
+
+## 8장에서 배운 내용
+- 네 가지 R소켓 패러다임: 요청-응답, 요청-스트림, 실행 후 망각, 채널
+- 네티를 웹 컨테이너로 사용하고 TCP를 전송 프로토콜로 사용하는 R소켓 서버 생성
+- 웹 요청을 R소켓을 통해 전달하는 R소켓 클라이언트 설정
+- 스프링 포트폴리오와 리액터를 활용해서 기능적 코드와 전송 프로토콜인 R소켓을 매끄럽게 연동하는 방법
