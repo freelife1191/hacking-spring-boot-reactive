@@ -1,3 +1,16 @@
+# Port for your Netty web service
+server:
+  port: 9000
+
+spring:
+  rsocket:
+    server:
+      # RSocket server port
+      port: 7000
+      # RSocket transport protocol
+      transport: tcp
+
+
 logging:
   level:
     org:
