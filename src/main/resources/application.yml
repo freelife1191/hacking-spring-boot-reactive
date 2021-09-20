@@ -10,13 +10,12 @@ spring:
       # RSocket transport protocol
       transport: tcp
 
-
 logging:
   level:
+    io:
+      rsocket: DEBUG
     org:
       springframework:
-        amqp: DEBUG
-        messaging: DEBUG
         data: DEBUG
     com:
       greglturnquist:
