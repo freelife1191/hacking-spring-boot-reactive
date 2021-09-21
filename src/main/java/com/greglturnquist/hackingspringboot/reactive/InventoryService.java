@@ -11,9 +11,9 @@ import java.util.stream.Collectors;
  */
 @Service
 public class InventoryService {
-    private ItemRepository itemRepository;
+    private final ItemRepository itemRepository;
 
-    private CartRepository cartRepository;
+    private final CartRepository cartRepository;
 
     InventoryService(ItemRepository repository, //
                      CartRepository cartRepository) {
@@ -53,13 +53,13 @@ public class InventoryService {
                             cartItem.increment();
                             return Mono.just(cart);
                         }) //
-                        .orElseGet(() -> this.itemRepository.findById(itemId) //
-                                .map(item -> new CartItem(item)) //
+                        .orElseGet(() -> this.itemRepository.findById(itemId)
+                                .map(CartItem::new)
                                 .map(cartItem -> {
                                     cart.getCartItems().add(cartItem);
                                     return cart;
                                 })))
-                .flatMap(cart -> this.cartRepository.save(cart));
+                .flatMap(this.cartRepository::save);
     }
 
     Mono<Cart> removeOneFromCart(String cartId, String itemId) {
@@ -76,6 +76,6 @@ public class InventoryService {
                 .map(cart -> new Cart(cart.getId(), cart.getCartItems().stream()
                         .filter(cartItem -> cartItem.getQuantity() > 0)
                         .collect(Collectors.toList())))
-                .flatMap(cart -> this.cartRepository.save(cart));
+                .flatMap(this.cartRepository::save);
     }
 }

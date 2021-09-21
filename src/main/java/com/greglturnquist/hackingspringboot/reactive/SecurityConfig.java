@@ -4,11 +4,15 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.server.SecurityWebFilterChain;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 /**
@@ -45,16 +49,55 @@ public class SecurityConfig {
                         .build());
     }
 
+    static final String USER = "USER";
+    static final String INVENTORY = "INVENTORY";
+
     /**
-     * 테스트 사용자 추가
+     * 커스텀 정책 작성
+     * @param http
+     * @return
+     */
+    @Bean
+    SecurityWebFilterChain myCustomSecurityPolicy(ServerHttpSecurity http) {
+        return http
+                .authorizeExchange(exchanges -> exchanges
+                        // 인가(authorization) 규칙, HTTP 동사(verb), URL 패턴, 역할(role) 등 접근 제어에 사용할 모든 규칙을 정의한다
+                        // 예제에서는 /로 들어오는 POST 요청, /**로 들어오는 DELETE 요청이
+                        // ROLE_INVENTORY라는 역할을 가진 사용자로부터 전송되었을 때만 진입을 허용한다
+                        .pathMatchers(HttpMethod.POST, "/").hasRole(INVENTORY)
+                        .pathMatchers(HttpMethod.DELETE, "/**").hasRole(INVENTORY)
+                        // 이 코드의 규칙에 어긋나는 모든 요청은 이 지점에서 더 이상 전진하지 못하며
+                        // 사용자 인증을 거쳐야만 이 지점을 통과할 수 있다
+                        .anyExchange().authenticated()
+                        .and()
+                        // HTTP BASIC 인증을 허용한다
+                        .httpBasic()
+                        .and()
+                        // 로그인 정보를 HTTP FORM으로 전송하는 것을 허용한다
+                        .formLogin())
+                .csrf().disable()
+                .build();
+    }
+
+    static String role(String auth) {
+        return "ROLE_" + auth;
+    }
+
+    /**
+     * 각기 역할이 다른 테스트용 사용자 추가
      * @param operations
      * @return
      */
     @Bean
     CommandLineRunner userLoader(MongoOperations operations) {
         return args -> {
+            // USER
             operations.save(new com.greglturnquist.hackingspringboot.reactive.User(
-                    "greg", "password", Collections.singletonList("ROLE_USER")));
+                    "greg", "password", Collections.singletonList(role(USER))));
+
+            // USER와 INVENTORY
+            operations.save(new com.greglturnquist.hackingspringboot.reactive.User(
+                    "manager", "password", Arrays.asList(role(USER), role(INVENTORY))));
         };
     }
 }
