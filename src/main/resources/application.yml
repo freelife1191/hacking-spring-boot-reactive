@@ -4,8 +4,13 @@ spring:
     hiddenmethod:
       filter:
         enabled: true
-  hateoas:
-    use-hal-as-default-json-media-type: false
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: GOOGLE_CLIENT_ID # 실제 구글에서 발급받은 client-id로 대체해야함
+            client-secret: GOOGLE_CLIENT_SECRET # 실제 구글에서 발급받은 client-secret으로 대체해야함
   devtools:
     restart:
       # 재시작 유발 배제 경로 지정

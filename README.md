@@ -2001,3 +2001,169 @@ implementation("org.springframework.boot:spring-boot-starter-hateoas"){
 
 보안 관점에서 두번째로 중요한 원칙은 첫 번째 원칙을 위배할 수 있는 어떤 단서도 사용자에게 보여주지 않는 것이다  
 하이퍼미디어 관점에서는 인가받지 못한 사용자가 접근할 수 없는 링크는 제공하지 말아야 함을 의미한다
+
+## OAuth 보안
+OAuth는 안전한 위임 접속(secure delegated access)을 보장하는 공개 프로토콜이다
+서드파티 앱에서 소셜 미디어 네트워크 사이트의 로그인 페이지를 띄워주며,  
+소셜 미디어 네트워크 사이트에서 로그인을 하면, 보안 토큰이 서드파티 앱에 전달되고,  
+서드파티 앱은 그 이후로는 사용자의 인증 정보가 아니라 보안 토큰을 통해 소셜 미디어 네트워크에 있는 사용자의 데이터에 접근할 수 있게 된다  
+서드파티 앱은 인증 정보를 관리할 필요 없이 오로지 토큰만 사용하면 된다  
+토큰에는 만기(expiration), 갱신(refresh)등의 핵심 기능이 포함돼 있다
+
+### OAuth 적용에 필요한 의존관계
+Maven
+```xml
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-config</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-oauth2-client</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-oauth2-jose</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.thymeleaf.extras</groupId>
+    <artifactId>thymeleaf-extras-springsecurity5</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-test</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+Gradle
+```groovy
+// Spring Security
+// 컨트롤러에서 스프링 시큐리티 설정 애너테이션과 타입을 사용하기 위해 필요
+implementation 'org.springframework.security:spring-security-config'
+// 우리가 만드는 애플리케이션 OAuth 클라이언트로서 OAuth 프로바이더와 통신할 때 필요
+implementation 'org.springframework.security:spring-security-oauth2-client'
+// JOSE(Javascript Object Signing and Encryption)를 사용할 때 필요
+implementation 'org.springframework.security:spring-security-oauth2-jose'
+implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity5'
+testImplementation 'org.springframework.security:spring-security-test'
+```
+
+### OAuth 프로바이더인 구글에 새 애플리케이션 등록
+1. https://developers.google.com/identity/protocols/oauth2/openid-connect 접속
+2. Credentials page 클릭
+
+![1](img/1.png)   
+
+3. 프로젝트 만들기 클릭
+
+![2](img/2.png)
+
+4. 프로젝트 이름은 **hacking-spring-boot-reactive** 로 입력하고 만들기 클릭
+
+![3](img/3.png)
+
+![4](img/4.png)
+
+5. **사용자 인증 정보 만들기**를 클릭하고 **OAuth 클라이언트 ID**를 클릭한다
+
+![5](img/5.png)
+
+6. **동의 화면 구성**을 클릭한다
+
+![6](img/6.png)
+
+7. **User Type**에서 **외부**를 선택하고 **만들기**를 클릭한다
+
+![7](img/7.png)
+
+8. 등록할 앱 기본 정보를 입력한다
+   앱 이름은 **hacking-spring-boot-reactive-oauth-app**, 이메일 같은 필수 정보만 입력하면 된다
+
+![8](img/8.png)
+
+9. 범위 지정 화면에서는 그대로 **저장 후 계속**을 클릭한다
+
+![9](img/9.png)   
+
+10. 테스트 사용자를 추가한다
+    테스트 사용자는 이메일을 입력해야 한다
+
+![10](img/10.png)
+
+11. 요약 화면이 표시되며 앱 등록 내용을 확인할 수 있다
+
+![11](img/11.png)
+
+12. 좌측 메뉴에서 **사용자 인증 정보**를 클릭하고 **사용자 인증 정보 만들기**를 클릭해서 **OAuth 클라이언트 ID**를 클릭한다
+
+![12](img/12.png)
+
+13. OAuth 클라이언트 ID를 만드는 데 필요한 정보를 입력한다
+    **승인된 리디렉션 URI**란에는 http://localhost:8080/login/oauth2/code/google을 입력하고 **만들기**를 클릭한다
+
+![13](img/13.png)
+
+14. 다음과 같이 클라이언트 ID, 클라이언트 보안 비밀번호가 생성되고 화면에 표시된다
+
+![14](img/14.png)
+
+15. 클라이언트 ID, 클라이언트 비밀번호는 나중에 다음과 같이 확인할 수도 있다
+
+![15](img/15.png)
+
+![16](img/16.png)
+
+### application.yml 파일에 OAuth 클라이언트 정보 입력
+```yaml
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: GOOGLE_CLIENT_ID # 실제 구글에서 발급받은 client-id로 대체해야함
+            client-secret: GOOGLE_CLIENT_SECRET # 실제 구글에서 발급받은 client-secret으로 대체해야함
+```
+
+애플리케이션을 실행하고 http://localhost:8080 에 접속하면 구글 로그인 화면으로 리다이렉트 된다  
+로그인 후 OAuth 세부정보가 표시되는 것을 확인할 수 있다
+
+![17](img/17.png)
+
+![18](img/18.png)
+
+![19](img/19.png)
+
+OAuth2를 사용하는 주된 이유는 사용자 정보 관리를 위임할 수 있기 때문이다  
+보안 문제 발생빈도를 생각해보면 사용자 정보 관리를 직접 하기보다, 구글, 페이스북, 옥타, 깃허브처럼 이미 안전하게  
+관리하고 있는 곳에 위임하는 것도 꽤 현명한 생각이다
+
+### 주요 OAtuh 프로바이더별 장단점
+- 구글과 페이스북은 가장 널리 사용되는 서비스이며 대부분의 사용자는 이 두 서비스의 계정을 가지고 있을 것이다
+- 깃허브 계정이 없는 개발자는 많지 않을 것이다
+  애플리케이션의 주 사용자가 개발자라면 깃허브에 위임하는 것도 좋다
+- 옥타는 세밀한 세용자 제어가 필요한 상황에서는 편리하지만, 필요 이상으로 복k잡하게 느껴질 수도 있다
+
+> 애플이나 트위터또는 다른 OIDC 프로바이더는 사용할 수 있지만 스프링 시큐리티에서 지원하고 있지 않아서 조금 손이 더 간다
+> OAuth 프로바이더가 제공하는 자료와 스프링 시큐리티에서 구글, 페이스북, 깃허브, 옥타를 지원하는 소스코드를 살펴보면
+> 어렵지 않게 스프링 시큐리티의 OIDC 속성값을 찾아서 연동할 수 있을 것이다
+
+### 커스텀 스코프
+사용자 관리를 외부에 위임할 때 고려해야 할 사항은 여러 가지 역할이나 권한을 선언하는 대신에 스코프를 다뤄야 한다는 점이다  
+스코프도 `SCOPE_` 접두어가 붙은 권한의 일종이라고 생각하면 쉽다  
+OAuth 프로바이더가 제공하는 스코프 외에 커스텀 스코프가 필요한지를 검토해보는 것이 중요하다  
+필요하지 않다면 OAuth 프로바이더를 사용하더라도 괜찮다  
+하지만 필요하다면 옥타를 사용하는 것이 좋다  
+구글이나 페이스북은 자기들의 API를 사용하는 데 중점을 두고 있어서 커스텀 스코프나 그룹을 만들 수 없다  
+
+커스텀 스코프 없이 일반적인 접근 제어만 필요하다면 구글이나 페이스북을 선택하면 된다  
+사용자가 대부분 개발자라면 깃허브를 사용할 수 있다  
+세밀한 역할 관리가 필요하다면 옥타를 선택하는 편이 가장 좋을 것이다
+
+## 9장에서 배운 내용
+- 스프링 부트 시큐리티 스타터를 추가해서 데모 애플리케이션 생성
+- 데이터베이스를 통해 사용자 정보를 관리할 수 있도록 스프링 데이터 리포지토리 사용
+- URL 기준 보안 규칙 설정
+- 메소드 수준 보안 설정을 통한 상세한 접근 제어
+- 사용자 관리를 구글 같은 서드파티 OAuth 프로바이더에 위임
