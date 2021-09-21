@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.User;
@@ -20,6 +21,8 @@ import java.util.Collections;
  * Created by KMS on 2021/09/21.
  */
 @Configuration
+// 메서드 수준 보안 활성화
+@EnableReactiveMethodSecurity
 public class SecurityConfig {
 
     /**
@@ -54,6 +57,7 @@ public class SecurityConfig {
 
     /**
      * 커스텀 정책 작성
+     * 단순해진 보안 정책
      * @param http
      * @return
      */
@@ -61,11 +65,6 @@ public class SecurityConfig {
     SecurityWebFilterChain myCustomSecurityPolicy(ServerHttpSecurity http) {
         return http
                 .authorizeExchange(exchanges -> exchanges
-                        // 인가(authorization) 규칙, HTTP 동사(verb), URL 패턴, 역할(role) 등 접근 제어에 사용할 모든 규칙을 정의한다
-                        // 예제에서는 /로 들어오는 POST 요청, /**로 들어오는 DELETE 요청이
-                        // ROLE_INVENTORY라는 역할을 가진 사용자로부터 전송되었을 때만 진입을 허용한다
-                        .pathMatchers(HttpMethod.POST, "/").hasRole(INVENTORY)
-                        .pathMatchers(HttpMethod.DELETE, "/**").hasRole(INVENTORY)
                         // 이 코드의 규칙에 어긋나는 모든 요청은 이 지점에서 더 이상 전진하지 못하며
                         // 사용자 인증을 거쳐야만 이 지점을 통과할 수 있다
                         .anyExchange().authenticated()

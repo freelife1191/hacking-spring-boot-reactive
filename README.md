@@ -965,32 +965,31 @@ HttpTraceRepository springDataTraceRepository(HttpTraceWrapperRepository reposit
 ```
 
 #### 몽고디비 Document를 HttpTraceWrapper로 변환하는 컨버터
-```java
-/**
- * 몽고디비 Document를 HttpTraceWrapper로 변환하는 컨버터
- */
-static Converter<Document, HttpTraceWrapper> CONVERTER = //
-        new Converter<Document, HttpTraceWrapper>() { //
-            @Override
-            public HttpTraceWrapper convert(Document document) {
-                Document httpTrace = document.get("httpTrace", Document.class);
-                Document request = httpTrace.get("request", Document.class);
-                Document response = httpTrace.get("response", Document.class);
 
-                return new HttpTraceWrapper(new HttpTrace( //
-                        new HttpTrace.Request( //
-                                request.getString("method"), //
-                                URI.create(request.getString("uri")), //
-                                request.get("headers", Map.class), //
-                                null),
-                        new HttpTrace.Response( //
-                                response.getInteger("status"), //
-                                response.get("headers", Map.class)),
-                        httpTrace.getDate("timestamp").toInstant(), //
-                        null, //
-                        null, //
-                        httpTrace.getLong("timeTaken")));
-            }
+```java
+
+static Converter<Document, HttpTraceWrapper> CONVERTER= //
+        new Converter<Document, HttpTraceWrapper>(){ //
+@Override
+public HttpTraceWrapper convert(Document document){
+        Document httpTrace=document.get("httpTrace",Document.class);
+        Document request=httpTrace.get("request",Document.class);
+        Document response=httpTrace.get("response",Document.class);
+
+        return new HttpTraceWrapper(new HttpTrace( //
+        new HttpTrace.Request( //
+        request.getString("method"), //
+        URI.create(request.getString("uri")), //
+        request.get("headers",Map.class), //
+        null),
+        new HttpTrace.Response( //
+        response.getInteger("status"), //
+        response.get("headers",Map.class)),
+        httpTrace.getDate("timestamp").toInstant(), //
+        null, //
+        null, //
+        httpTrace.getLong("timeTaken")));
+        }
         };
 ```
 
@@ -1079,14 +1078,14 @@ management:
 
 ## API 포털 생성
 
-Spring REST Docs은 API 문서화 작업을 도와준다  
+**Spring REST Docs**은 API 문서화 작업을 도와준다  
 사용자가 직접 사용해볼 수 있는 API 예제를 포함해서 API 문서를 쉽게 만들어낼 수 있다  
-여러 분야에서 사용성이 입증된 Asciidoctor 문서화 도구를 사용해서 세부 내용도 쉽게 문서로 만들 수 있다  
+여러 분야에서 사용성이 입증된 **Asciidoctor** 문서화 도구를 사용해서 세부 내용도 쉽게 문서로 만들 수 있다  
 
 ### API 문서화를 위한 asciidoc 사용 설정
-Asciidoc는 표준이고 Asciidoctor는 Asciidoc 표준을 Ruby 언어로 구현한 프로젝트이다
+**Asciidoc**는 표준이고 **Asciidoctor**는 **Asciidoc** 표준을 **Ruby** 언어로 구현한 프로젝트이다
 
-`asciidoctor-maven-plugin`은 확장자가 .adoc인 Asciidoc 파일을 HTML로 변환해준다  
+`asciidoctor-maven-plugin`은 확장자가 `.adoc`인 **Asciidoc** 파일을 **HTML**로 변환해준다  
 **Spring REST Docs**는 `Asciidoc`파일의 주요 내용을 자동으로 생성해준다  
 최종 HTML은 `target/generated-docs`에 저장된다  
 
@@ -1924,3 +1923,81 @@ SecurityConfig 클래스에서 MongoOperations를 사용해서 미리 저장해�
 > 이 메소드 호출이 필요해진다면 `private` 대신 `protected`나 `public`으로 가시성을 확장해도 된다 
 
 **Authentication** 객체를 템플릿의 모델로 추가하면 사용자 컨텍스트 정보를 보여줄 수 있게 된다는 확실한 장점이 추가된다
+
+## 메소드 수준 보안
+- 컨트롤러 클래스를 변경하면 시큐리티 정책도 함께 변경해야 한다
+- 컨트롤러가 추가될수록 SecurityWebFilterChin 빈에 추가해야할 규칙도 금세 늘어난다
+- 웹 엔드포인트와 직접적으로 연결되지는 않지만 역할 기반의 보안 규칙을 적용할 수 있다면 좋지 않을까?
+
+이런 이슈를 해결하기 위해 메소드 수준 보안(method level security) 방식이 등장했다
+
+스프링 시큐리티 애너테이션을 메소드에 직접 명시해서 비즈니스 로직이 있는 곳에 필요한 보안 조치를 직접 적용할 수 있다  
+수십 개의 컨트롤러의 수많은 URL에 대한 보안 규칙을 SecurityConfig에 정의하는 대신에  
+비즈니스 로직에 따라 적절한 보안 규칙을 비즈니스 로직 바로 곁에 둘 수 있다
+
+### 메소드 수준 보안 활성화 
+```java
+@Configuration
+// 메서드 수준 보안 활성화
+@EnableReactiveMethodSecurity
+public class SecurityConfig {
+    
+}
+```
+
+### Spring HATEOS 설정 추가
+Maven
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-hateoas</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+```
+
+Gradle
+```groovy
+implementation("org.springframework.boot:spring-boot-starter-hateoas"){
+    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-web'
+}
+```
+
+> 앞에서 변수를 `private`으로 선언하는 이유를 언급한 적이 있다
+> 다른 옵션은 자바의 기본 접근 지정자를 적용하는 것이다
+> **SecurityCOnfig** 클래스에서 **USER** 변수를 `static final String USER = "USER"`로 정의했다
+> `public`을 제거하고 아무런 **접근 지정자**(**access modifier**)를 지정하지 않으면
+> **USER** 변수는 동일 패키지 내에 있는 클래스에서만 접근할 수 있게 된다
+
+> 애플리케이션 개발 초기 단계에서는 이 방식을 사용하는 것이 좋다
+> 애플리케이션이 점점 규모가 커질 때 외부 컴포넌트로부터의 커플링을 많이 줄일 수 있다
+> 그리고 `public`은 의도적으로 지정해야만 추가되므로 무심결에 외부에 노출하는 일이 없어지고
+> `public`이 붙은 것들은 모두 의도적으로 노출하는 것이라고 판단할 수 있게 된다
+
+> HAL(Hypertext Application Language) 문서에는 조회/추가/수정이 모두 똑같은 링크로 표현된다
+> HAL은 HTTP 동사를 알지 못하기 때문에 이런 이슈가 발생하며
+> 예제에서는 이 이슈를 피하기 위해 조금 다른 방식으로 URI를 구성했다
+
+`@PreAuthorize`는 메소드 수준 보안에 관해서는 스프링 시큐리티의 중심 타자라고 할 수 있다  
+더 복잡한 표현식을 사용할 수도 있으며 심지어 메소드 인자를 사용할 수도 있다  
+또한 `@PreAuthorize`를 사용하면 메소드 호출 후에 보안 규칙을 적용할 수도 있다  
+중요 결정 사항이 포함된 핵심 내용이 반환되는 경우 `@PostAuthorize`를 사용하면 좋다  
+스프링 시큐리티 **SpEL** 표현식에 단순히 `returnObject`를 사용해서 반환값을 참조하면 된다  
+하지만 데이터베이스를 수정하고 반환값으로 제어하는 것은 비용이 든다
+
+결과 목록을 반환받은 후에 필터링을 하고 싶다면 `@PostFilter`를 사용할 수 있다  
+이렇게 하면 현재 사용자가 볼 수 있도록 인가되지 않은 데이터를 반환 목록에서 필터링해서 제외할 수 있다  
+편리하긴 하지만 결국 필터링될 데이터를 포함해서 많은 양의 데이터를 조회하는 것 자체가 비효율적이다  
+그래서 스프링 데이터는 **Authentication** 객체를 사용해서 현재 사용자가 볼 수 있는 데이터만 조회하는 기능을 지원한다
+
+> 스프링 시큐리티와 스프링 데이터의 통합은 `@Query` 애너테이션을 사용할 때만 적용된다
+
+보안 관점에서 가장 중요한 첫 번째 원칙은 권한이 부족한 사용자가 인가받지 않은 기능을 사용하지 못하게 하는 것이다  
+**ROLE_INVENTORY** 권한을 가진 사용자만 시스템 재고를 변경하는 기능을 수행할 수 있다
+
+보안 관점에서 두번째로 중요한 원칙은 첫 번째 원칙을 위배할 수 있는 어떤 단서도 사용자에게 보여주지 않는 것이다  
+하이퍼미디어 관점에서는 인가받지 못한 사용자가 접근할 수 없는 링크는 제공하지 말아야 함을 의미한다

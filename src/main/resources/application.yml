@@ -4,6 +4,8 @@ spring:
     hiddenmethod:
       filter:
         enabled: true
+  hateoas:
+    use-hal-as-default-json-media-type: false
   devtools:
     restart:
       # 재시작 유발 배제 경로 지정
