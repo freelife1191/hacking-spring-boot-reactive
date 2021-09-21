@@ -2167,3 +2167,110 @@ OAuth 프로바이더가 제공하는 스코프 외에 커스텀 스코프가 �
 - URL 기준 보안 규칙 설정
 - 메소드 수준 보안 설정을 통한 상세한 접근 제어
 - 사용자 관리를 구글 같은 서드파티 OAuth 프로바이더에 위임
+
+# 한국어판 특별부록 - 리액티브 스트림 시퀀스 다이어그램
+
+![reactive](img/20.png)
+
+위에서 아래쪽으로 순서대로 상호작용이 발생  
+실선 화살표는 메소드 호출을 의미함  
+화살표 위에는 메소드 이름, 아래에는 메소드 인자를 표시함  
+점선 화살표는 반환을 의미하며 화살표 아래 괄호 없이 표시된 것은 반환 값
+
+**Processor** 인터페이스는 자기만의 고유 메소드는 없고 단순히 **Publish**, **Subscriber** 두 가지 인터페이스를 상속받는다  
+**Processor** 없이 나머지 3개만으로도 리액티브 스트림 협력을 구성할 수 있으므로 다이어그램에서 **Processor**는 제외 한다  
+**Publisher**, **Subscriber**, **Subscription** 인터페이스가 가지고 있는 모든 메소드가 표시돼 있으며  
+**Publisher**의 `map`, `flatMap`, `zip`, ...라고 표시한 리액티브 연산자는 리액티브 스트림 명세에는 없지만  
+설명의 편의를 위해 리액티브 스트림 구현체인 리액터의 **Flux**에서 가져왔다
+
+## 데이터 핸들러 로직 정의 및 Subscriber 생성
+데이터를 요청하는 Client는 데이터를 받아서 어떻게 처리할지, 데이터를 받는 과정에서 오류를 전달받으면 어떻게 처리할지  
+데이터를 모두 받은 후에 어떤 일을 할지 정해야 할 책임을 가지고 있다  
+그런 책임을 각각 `nextConsumer`, `errorConsumer`, `completeRunnable`로 정의하고 이를 주입하면서 **subscriber**를 생성한다
+
+설명의 편의를 위해 **subscriber** 생성을 가장 먼저 표시했는데 그림을 보면 알 수 있겠지만 반드시 가장 먼저 수행할 필요는 없다  
+**subscriber**는 `publisher.subscribe(subscriber)`가 호출되기 전까지만 생성하면 된다
+
+## DataProvider에 데이터 요청 및 Publisher 생성
+클라이언트는 **DataProvider**에게 데이터를 요청한다  
+**DataProvider**는 특정 클래스 이름은 아니고 클라이언트로부터 호출을 받으면 데이터 저장소와 연동해서
+실제 데이터를 반환하는 책임이 있는 객체를 의미한다고 보면된다  
+예를 들면 `ReactiveMongoOperations(ReactiveMongoTemplate)`나 **ReactiveMongoRepository**라고 생각하면 된다  
+이 **DataProvider**는 나중에 데이터를 제공할 수 있도록 콜백을 생성하고 이를 publisher를 생성하면서 주입해준다  
+**DataProvider**는 생성한 **publisher**를 클라이언트에 반환한다
+
+## 구독하기
+클라이언트는 **DataProvider**로부터 **publisher**를 반환받고 나서, 나중에 **publisher**가 발행할 데이터를 받아서
+비즈니스 요구에 맞게 가공하는 데 사용할 로직을 추가한다  
+`map`, `flatMap`, `zip`등 여러 리액티브 연산자가 이때 사용된다
+
+클라이언트는 데이터 가공 로직 추가를 마친 후에 `publisher.subscribe(subscriber)`를 호출한다  
+리액티브 스트림에서 절대 잊어서는 안 될 가장 중요한 특징 중 하나는 구독하기 전에는 아무 일도 일어나지 않는다는 점이다  
+즉 앞에서 아무리 `nextConsumer`, `errorConsumer`, `completeRunnable`을 모두 정의하고 **DataProvider**를 호출해서 데이터를 가져오고  
+가공하는 로직을 구현해뒀다 하더라도 `publisher.subscribe(subscriber)`를 호출하지 않으면 앞서 만든 모든 것은 전혀 실행되지 않는다  
+더 정확하게 말하면 데이터를 가져오는 로직은 아직 콜백에 담겨 있을 뿐이고  
+구독하기 전에는 콜백이 실행되지 않는다  
+지금까지는 스트림 데이터 처리를 위한 파이프라인을 구성한 것 뿐이다  
+`publisher.subscribe(subscriber)`가 호출되면서 드디어 구독이 실행되고 파이프라인에 데이터가 흐르기 시작한다
+
+## Subscription 생성
+`publisher.subscribe(subscriber)`가 호출되면 **publisher**는 인자로 받은 **subscriber**와 자신이 생성될 때 주입받은  
+**dataCallback**을 주입하면서 **subscription**을 생성하고 `subscriber.onSubscribe(subscription)`을 호출해서  
+**subscription**을 **subscriber**에게 전달해준다
+
+## Subscription에 데이터 요청
+**subscriber**는 `onSubscribe(subscription)`을 통해 **subscription**을 전달받으면   
+`subscription.request(numOfData)`를 호출해서 데이터를 요청한다  
+자신이 소화할 수 있을 만큼의 데이터만 요청할 수 있으므로 배압(backpressure) 개념이 이지점에서 발동한다  
+그리고 실제 데이터 접근도 이 시점에서 시작된다
+
+## 실제 데이터 접근 및 onNext/onError/onComplete 호출
+**subscription**은 자신이 생성될 때 주입받은 콜백을 호출해서 **numOfData**만큼만 데이터를 가져오고  
+`subscriber.onNext(data)`를 반복 호출해서 **subscriber**에게 데이터를 전달한다  
+이 과정에서 오류가 발생하면 `subscriber.onError(throwable)`로 오류를 **subscriber**에게 전달하고  
+데이터 전달이 정상적으로 완료되면 `subscriber.onComplete()`를 호출하며 스트림을 처리하는 협동 과정이 종료된다
+
+## 비동기는 어디에?
+리액티브 스트림이 배압과 함꼐 스트림을 비동기로 처리할 수 있는 표준인데, 지금까지 살펴본 협력 구조에서 비동기 처리는 어디에 있는 걸까?
+
+사실 리액티브 스트림이 비동기 스트림 처리 표준이라고는 하지만 네 가지 인터페이스를 보면 비동기 관련 내용은 전혀 없다  
+다시 말해, 비동기 처리 없이 동기 처리만 사용하더라도 스트림을 리액티브 방식으로 처리하는 것이 가능하다  
+결국 리액티브 스트림은 비동기를 강제하지 않는다  
+그래서 비동기 처리는 실질적으로는 구현에 달려 있다
+
+스프링 웹플럭스에서 사용하는 리액터의 비동기 처리 관련 규약은 `reactor.core.scheduler.Scheduler` 인터페이스에 담겨 있다  
+`Scheculer` 인터페이스의 구현체 중 하나인 `ExecutorScheduler`를 보면 다음과 같이 `Runnable task`를 `Executor` 스레드풀을 사용해서 실행하는 것을 확인할 수 있다
+
+```java
+final class ExecutorScheduler implements Scheduler, Scannable {
+
+  final Executor executor;
+  
+  ...
+
+  @Override
+  public Disposable schedule(Runnable task) {
+    if (terminated) {
+      throw Exceptions.failWithRejected();
+    }
+    Objects.requireNonNull(task, "task");
+    ExecutorPlainRunnable r = new ExecutorPlainRunnable(task);
+
+    try {
+      executor.execute(r);
+    } catch (Throwable ex) {
+      if (executor instanceof ExecutorService && ((ExecutorService) executor).isShutdown()) {
+        terminated = true;
+      }
+      Schedulers.handleError(ex);
+      throw Exceptions.failWithRejected(ex);
+    }
+    return r;
+  }
+
+...
+```
+
+리액티브 스트림을 사용해서 개발하다 보면 어쩔 수 없이 리액티브 연산자에 치중하게 되는데 협력 구조를 모른다면  
+"왜 이런 이름의 연산자를 왜 이곳에서 사용하는가?"라는 물음이 자주 걸림돌이 될 것이다  
+그런 어려움을 느낄 때 이 그림을 다시 살펴보면 도움이 될 것이다
