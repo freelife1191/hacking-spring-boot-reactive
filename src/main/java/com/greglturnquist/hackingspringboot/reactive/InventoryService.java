@@ -21,14 +21,6 @@ public class InventoryService {
         this.cartRepository = cartRepository;
     }
 
-    public Flux<Cart> getAllCarts() {
-        return this.cartRepository.findAll();
-    }
-
-    public Mono<Cart> newCart() {
-        return this.cartRepository.save(new Cart("cart"));
-    }
-
     public Mono<Cart> getCart(String cartId) {
         return this.cartRepository.findById(cartId);
     }

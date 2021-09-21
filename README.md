@@ -1088,9 +1088,9 @@ Asciidoc는 표준이고 Asciidoctor는 Asciidoc 표준을 Ruby 언어로 구현
 
 `asciidoctor-maven-plugin`은 확장자가 .adoc인 Asciidoc 파일을 HTML로 변환해준다  
 **Spring REST Docs**는 `Asciidoc`파일의 주요 내용을 자동으로 생성해준다  
-최종 HTML은 `target/generated-docs`에 저장된다
+최종 HTML은 `target/generated-docs`에 저장된다  
 
-Maven
+Maven  
 ```xml
 <plugin>
   <groupId>org.asciidoctor</groupId>
@@ -1119,22 +1119,22 @@ Maven
 </plugin>
 ```
 
-Gradle
-참조: https://subji.github.io/posts/2021/01/06/springrestdocsexample
-참조: https://gaemi606.tistory.com/entry/Spring-Boot-REST-Docs-%EC%A0%81%EC%9A%A9%ED%95%98%EA%B8%B0
-참조: https://velog.io/@hydroniumion/BE1%EC%A3%BC%EC%B0%A8-Spring-Rest-Docs-%EC%A0%81%EC%9A%A9%EA%B8%B0
-참조: https://jaehun2841.github.io/2019/08/04/2019-08-04-spring-rest-docs/
-참조: https://beemiel.tistory.com/13
-참조(Kotlin): https://dwony26.tistory.com/134
-최신버전 참조: https://velog.io/@max9106/Spring-Spring-rest-docs%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%9C-%EB%AC%B8%EC%84%9C%ED%99%94
-최신버전 참조: https://eclipse4j.tistory.com/364
-최신버전 참조(많은 도움됨): https://huisam.tistory.com/entry/RESTDocs
-최신버전 참조(많은 도움됨): https://hhseong.tistory.com/212
-Spring REST Docs: https://docs.spring.io/spring-restdocs/docs/current/reference/html5/
-Asciidoctor Gradle Plugin Document: https://asciidoctor.github.io/asciidoctor-gradle-plugin/master/user-guide/
-Asciidoc 기본 사용법: https://narusas.github.io/2018/03/21/Asciidoc-basic.html
-Gradle Docs: https://plugins.gradle.org/plugin/org.asciidoctor.jvm.convert
-우아한형제들 Spring Rest Docs 적용: https://techblog.woowahan.com/2597/
+Gradle  
+참조: https://subji.github.io/posts/2021/01/06/springrestdocsexample  
+참조: https://gaemi606.tistory.com/entry/Spring-Boot-REST-Docs-%EC%A0%81%EC%9A%A9%ED%95%98%EA%B8%B0  
+참조: https://velog.io/@hydroniumion/BE1%EC%A3%BC%EC%B0%A8-Spring-Rest-Docs-%EC%A0%81%EC%9A%A9%EA%B8%B0  
+참조: https://jaehun2841.github.io/2019/08/04/2019-08-04-spring-rest-docs/  
+참조: https://beemiel.tistory.com/13  
+참조(Kotlin): https://dwony26.tistory.com/134  
+최신버전 참조: https://velog.io/@max9106/Spring-Spring-rest-docs%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%9C-%EB%AC%B8%EC%84%9C%ED%99%94  
+최신버전 참조: https://eclipse4j.tistory.com/364  
+최신버전 참조(많은 도움됨): https://huisam.tistory.com/entry/RESTDocs  
+최신버전 참조(많은 도움됨): https://hhseong.tistory.com/212  
+Spring REST Docs: https://docs.spring.io/spring-restdocs/docs/current/reference/html5/  
+Asciidoctor Gradle Plugin Document: https://asciidoctor.github.io/asciidoctor-gradle-plugin/master/user-guide/  
+Asciidoc 기본 사용법: https://narusas.github.io/2018/03/21/Asciidoc-basic.html  
+Gradle Docs: https://plugins.gradle.org/plugin/org.asciidoctor.jvm.convert  
+우아한형제들 Spring Rest Docs 적용: https://techblog.woowahan.com/2597/  
 ```groovy
 plugins {
   ..
@@ -1807,3 +1807,54 @@ A 터미널에서는 2건의 Item 정보가 한 번에 표시된다
 - 네티를 웹 컨테이너로 사용하고 TCP를 전송 프로토콜로 사용하는 R소켓 서버 생성
 - 웹 요청을 R소켓을 통해 전달하는 R소켓 클라이언트 설정
 - 스프링 포트폴리오와 리액터를 활용해서 기능적 코드와 전송 프로토콜인 R소켓을 매끄럽게 연동하는 방법
+
+# PART 9. 스프링 부트 애플리케이션 보안
+- 다양한 사용자 정보 저장소를 사용하는 스프링 시큐리티 설정
+- HTTP 엔드포인트에 라우트 기반 보안 설정 적용
+- 리액티브 엔드포인트에 메소드 수준 보안 적용
+- 권한 검사를 위한 스프링 시큐리티 컨텍스트 연동
+
+## 스프링 시큐리티 시작하기
+
+### 스프링 부트 프로젝트에 스프링 시큐리티 의존관계 추가
+
+Maven
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-test</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+Gradle
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-security'
+testImplementation 'org.springframework.security:spring-security-test'
+```
+
+서버기동시 password 출력
+```bash
+Using generated security password: 76944ff8-5790-4f9a-b749-823ed6ee61c1
+```
+
+기본 로그인    
+- username: user
+- passworkd: 76944ff8-5790-4f9a-b749-823ed6ee61c1(무작위로 생성된 PASSWORD)
+
+스프링 시큐리티는 다음과 같은 다중 계층 방식으로 광범위한 보안을 적용  
+- 여러가지 필터가 생성되고 적절한 순서로 등록된다
+- 웹 페이지에 다양한 지시어가 추가된다
+  - 바람직하지 않은 정보가 브라우저 캐시에 유입되는 것 방지
+  - clickjacking(https://owasp.org/www-community/attacks/Clickjacking, https://ko.wikipedia.org/wiki/%ED%81%B4%EB%A6%AD%EC%9E%AC%ED%82%B9)
+  - session fixation(https://owasp.org/www-community/attacks/Session_fixation, https://anjoliena.tistory.com/10)
+  - XSS projections(https://owasp.org/www-community/attacks/xss/, https://ko.wikipedia.org/wiki/%EC%82%AC%EC%9D%B4%ED%8A%B8_%EA%B0%84_%EC%8A%A4%ED%81%AC%EB%A6%BD%ED%8C%85)
+  - 등 보안 위험 방어
+  - 서버 응답에 적절한 보안 헤더 추가
+  - Cross Site Request Forgery, CSRF(https://owasp.org/www-community/attacks/csrf, https://ko.wikipedia.org/wiki/%EC%82%AC%EC%9D%B4%ED%8A%B8_%EA%B0%84_%EC%9A%94%EC%B2%AD_%EC%9C%84%EC%A1%B0
+    방지 활성화

@@ -1,11 +1,25 @@
+spring:
+  webflux:
+    # hidden으로 지정된 웹 메소드(DELETE, PUT, PATCH) 처리 활성화
+    hiddenmethod:
+      filter:
+        enabled: true
+  devtools:
+    restart:
+      # 재시작 유발 배제 경로 지정
+      exclude: static/**,public/**
+#      # 자동재시작 사용여부
+#      enabled: true
+#      # classpath 감지 주기 설정(선택사항)
+#      # 빌드하는 시간이 오래걸려 재시작 주기를 길게 가져가고 싶다면 아래의 값을 이용해 갱신
+#      # poll-interval 값은 항상 quiet-period 보다 커야한다
+#      #poll-interval: 2s
+#      #quiet-period: 1s
+  thymeleaf:
+    # 개발환경에서 캐시 기능 비활성화
+    cache: false
 logging:
   level:
-    io:
-      rsocket: DEBUG
     org:
       springframework:
-        data: DEBUG
-    com:
-      greglturnquist:
-        hackingspringboot: DEBUG
-    reactor: DEBUG
+        security: DEBUG
