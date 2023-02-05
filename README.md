@@ -1,5 +1,102 @@
 # 스프링 부트 실전 활용 마스터
 
+목차
+=================
+
+* [스프링 부트 실전 활용 마스터](#스프링-부트-실전-활용-마스터)
+* [PART 1\. 스프링 부트 웹 애플리케이션 만들기](#part-1-스프링-부트-웹-애플리케이션-만들기)
+  * [Mono](#mono)
+    * [Future는 제공해주지 않지만 Flux는 제공해주는 것](#future는-제공해주지-않지만-flux는-제공해주는-것)
+  * [1장에서 배운 내용](#1장에서-배운-내용)
+* [PART 2\. 스프링 부트를 활용한 데이터 엑세스](#part-2-스프링-부트를-활용한-데이터-엑세스)
+  * [이커머스 도메인 정의](#이커머스-도메인-정의)
+  * [MongoOperation](#mongooperation)
+  * [스프링 데이터 몽고디비 쿼리 메소드 이름 규칙](#스프링-데이터-몽고디비-쿼리-메소드-이름-규칙)
+  * [몽고디비 리포지토리 메소드가 지원하는 반환 타입](#몽고디비-리포지토리-메소드가-지원하는-반환-타입)
+  * [Example 쿼리](#example-쿼리)
+  * [쿼리 방법별 장단점](#쿼리-방법별-장단점)
+  * [2장에서 배운내용](#2장에서-배운내용)
+* [PART 3\. 스프링 부트 개발자 도구](#part-3-스프링-부트-개발자-도구)
+  * [devtools](#devtools)
+  * [개발에서 Thmeleaf 캐시 비활성화](#개발에서-thmeleaf-캐시-비활성화)
+  * [로깅](#로깅)
+  * [리액터 플로우 디버깅](#리액터-플로우-디버깅)
+    * [Hooks\.onOperatorDebug() 사용 스택 트레이스](#hooksonoperatordebug-사용-스택-트레이스)
+  * [블록하운드를 사용한 블로킹 코드 검출](#블록하운드를-사용한-블로킹-코드-검출)
+  * [3장에서 배운 내용](#3장에서-배운-내용)
+* [PART 4\. 스프링 부트 테스트](#part-4-스프링-부트-테스트)
+  * [스프링 부트 슬라이스 테스트](#스프링-부트-슬라이스-테스트)
+    * [몽고디비 슬라이스 테스트](#몽고디비-슬라이스-테스트)
+    * [블록하운드 사용 단위 테스트](#블록하운드-사용-단위-테스트)
+  * [4장에서 배운 내용](#4장에서-배운-내용)
+* [PART 5\. 스프링 부트 운영](#part-5-스프링-부트-운영)
+  * [우버 JAR 배포](#우버-jar-배포)
+    * [JAR 파일 내부에 포함된 항목](#jar-파일-내부에-포함된-항목)
+  * [도커 배포](#도커-배포)
+    * [계층화 적용](#계층화-적용)
+      * [빌드 파일에서 계층형 JAR 사용하도록 지정](#빌드-파일에서-계층형-jar-사용하도록-지정)
+      * [계층적 JAR clean 후 build](#계층적-jar-clean-후-build)
+      * [새 계층 확인](#새-계층-확인)
+      * [계층화 적용 Dockerfile](#계층화-적용-dockerfile)
+      * [컨테이너 이미지 빌드](#컨테이너-이미지-빌드)
+      * [도커로 애플리케이션 실행](#도커로-애플리케이션-실행)
+      * [spring\-boot로 도커 이미지 빌드](#spring-boot로-도커-이미지-빌드)
+    * [Dockerfile 이미지와 Paketo 이미지](#dockerfile-이미지와-paketo-이미지)
+  * [운영 애플리케이션 관리](#운영-애플리케이션-관리)
+    * [애플리케이션 정상상태 점검: /actuator/health](#애플리케이션-정상상태-점검-actuatorhealth)
+    * [애플리케이션 상세정보: /actuator/info](#애플리케이션-상세정보-actuatorinfo)
+      * [애플리케이션 버전 정보 추가](#애플리케이션-버전-정보-추가)
+      * [Git 커밋과 브랜치 정보 확인](#git-커밋과-브랜치-정보-확인)
+    * [로깅 정보 엔드포인트: /actuator/loggers](#로깅-정보-엔드포인트-actuatorloggers)
+      * [스프링 부트 액추에이터로 로그 레벨 수정](#스프링-부트-액추에이터로-로그-레벨-수정)
+      * [로그 레벨 지정 해제](#로그-레벨-지정-해제)
+  * [다양한 운영 데이터 확인](#다양한-운영-데이터-확인)
+    * [스레드 정보 확인: /actuator/threaddump](#스레드-정보-확인-actuatorthreaddump)
+    * [힙 정보 확인: /actuator/heapdump](#힙-정보-확인-actuatorheapdump)
+    * [HTTP 호출 트레이싱: /actuator/httptrace](#http-호출-트레이싱-actuatorhttptrace)
+      * [인메모리 기반 HttpTraceRepository 빈 등록](#인메모리-기반-httptracerepository-빈-등록)
+    * [몽고디비에 트레이스 정보 저장](#몽고디비에-트레이스-정보-저장)
+      * [HttpTrace 객체를 몽고디비에 저장하기 위해 사용할 래퍼 클래스](#httptrace-객체를-몽고디비에-저장하기-위해-사용할-래퍼-클래스)
+      * [HttpTraceWrapperRepository 작성](#httptracewrapperrepository-작성)
+      * [스프링 데이터 리포지토리를 사용하는 HttpTraceRepository 구현 클래스](#스프링-데이터-리포지토리를-사용하는-httptracerepository-구현-클래스)
+      * [SpringDataHttpTraceRepository 빈 등록](#springdatahttptracerepository-빈-등록)
+      * [몽고디비 Document를 HttpTraceWrapper로 변환하는 컨버터](#몽고디비-document를-httptracewrapper로-변환하는-컨버터)
+    * [스프링 데이터 몽고디비에 커스텀 컨버터 등록](#스프링-데이터-몽고디비에-커스텀-컨버터-등록)
+    * [그 밖의 엔드포인트](#그-밖의-엔드포인트)
+  * [관리 서비스 경로 수정](#관리-서비스-경로-수정)
+    * [액추에이터 루트 엔드 포인트 변경](#액추에이터-루트-엔드-포인트-변경)
+    * [액추에이터 상세 경로 변경](#액추에이터-상세-경로-변경)
+  * [5장에서 배운 내용](#5장에서-배운-내용)
+* [PART 6\. 스프링 부트 API 서버 구축](#part-6-스프링-부트-api-서버-구축)
+  * [HTTP 웹 서비스 구축](#http-웹-서비스-구축)
+  * [API 포털 생성](#api-포털-생성)
+    * [API 문서화를 위한 asciidoc 사용 설정](#api-문서화를-위한-asciidoc-사용-설정)
+    * [spring\-restdocs\-webtestclient 의존관계 추가](#spring-restdocs-webtestclient-의존관계-추가)
+  * [API 진화 반영](#api-진화-반영)
+  * [하이퍼미디어 기반 웹 서비스 구축](#하이퍼미디어-기반-웹-서비스-구축)
+    * [Spring HATEOS 의존관계 추가](#spring-hateos-의존관계-추가)
+  * [하이퍼미디어의 가치](#하이퍼미디어의-가치)
+  * [API에 행동 유도성 추가](#api에-행동-유도성-추가)
+  * [6장에서 배운 내용](#6장에서-배운-내용)
+* [PART 7\. 스프링 부트 메시징](#part-7-스프링-부트-메시징)
+  * [메시징 솔루션 선택](#메시징-솔루션-선택)
+  * [익숙한 패턴을 사용한 문제 해결](#익숙한-패턴을-사용한-문제-해결)
+  * [손쉬운 테스트](#손쉬운-테스트)
+    * [테스트컨테이너 버전 지정](#테스트컨테이너-버전-지정)
+  * [테스트컨테이너 사용 테스트](#테스트컨테이너-사용-테스트)
+    * [테스트 케이스 구성](#테스트-케이스-구성)
+  * [스케줄러를 사용해서 블로킹 API 감싸기](#스케줄러를-사용해서-블로킹-api-감싸기)
+  * [컨슈머 작성](#컨슈머-작성)
+    * [익명 큐(anonymous queue)와 이름 있는 큐(named queue)의 차이](#익명-큐anonymous-queue와-이름-있는-큐named-queue의-차이)
+    * [Serializable을 피하는 것이 중요하다](#serializable을-피하는-것이-중요하다)
+    * [리액터, RabbitMQ, 스프링 데이터의 협업과정을 확인하기 위한 로그 설정 추가](#리액터-rabbitmq-스프링-데이터의-협업과정을-확인하기-위한-로그-설정-추가)
+    * [비동기 메시징 솔루션의 핵심 개념](#비동기-메시징-솔루션의-핵심-개념)
+  * [7장에서 배운 내용](#7장에서-배운-내용)
+
+Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
+
+---
+
 # PART 1. 스프링 부트 웹 애플리케이션 만들기
 ## Mono
 Mono는 0또는 1개의 원소만 담을 수 있는 리액티브 발행자(publisher)로서, 프로젝트 리액터에서 제공해주는 구현체다
@@ -23,6 +120,8 @@ Flux는 다수의 값을 지원하는 것이 목적
 - 리액티브 프로그래밍 개념을 스프링 웹플럭스 컨트롤러와 서비스에 적용해봤다
 - 첫 번째 스프링 부트 애플리케이션을 실행하고 cURL을 사용해서 비동기 스트림으로 제공되는 요리가 사용되는 모습을 살펴봤다
 - 첫 번째 타임리프 템플릿을 만들고 정적인 웹 페이지로 렌더링해서 화면에 표시했다
+
+---
 
 # PART 2. 스프링 부트를 활용한 데이터 엑세스
 ## 이커머스 도메인 정의
@@ -120,6 +219,8 @@ void 대신에 `Mono<Void>`를 반환타입을 사용함
 - 객체 저장 및 조회에 사용할 리포지토리 생성
 - 커스텀 쿼리를 작성하는 여러 가지 방식
 - 앞에서 다룬 모든 내용을 서비스에 옮겨 담아서 웹 계층과 분리하는 방법
+
+---
 
 # PART 3. 스프링 부트 개발자 도구
 
@@ -965,31 +1066,32 @@ HttpTraceRepository springDataTraceRepository(HttpTraceWrapperRepository reposit
 ```
 
 #### 몽고디비 Document를 HttpTraceWrapper로 변환하는 컨버터
-
 ```java
+/**
+ * 몽고디비 Document를 HttpTraceWrapper로 변환하는 컨버터
+ */
+static Converter<Document, HttpTraceWrapper> CONVERTER = //
+        new Converter<Document, HttpTraceWrapper>() { //
+            @Override
+            public HttpTraceWrapper convert(Document document) {
+                Document httpTrace = document.get("httpTrace", Document.class);
+                Document request = httpTrace.get("request", Document.class);
+                Document response = httpTrace.get("response", Document.class);
 
-static Converter<Document, HttpTraceWrapper> CONVERTER= //
-        new Converter<Document, HttpTraceWrapper>(){ //
-@Override
-public HttpTraceWrapper convert(Document document){
-        Document httpTrace=document.get("httpTrace",Document.class);
-        Document request=httpTrace.get("request",Document.class);
-        Document response=httpTrace.get("response",Document.class);
-
-        return new HttpTraceWrapper(new HttpTrace( //
-        new HttpTrace.Request( //
-        request.getString("method"), //
-        URI.create(request.getString("uri")), //
-        request.get("headers",Map.class), //
-        null),
-        new HttpTrace.Response( //
-        response.getInteger("status"), //
-        response.get("headers",Map.class)),
-        httpTrace.getDate("timestamp").toInstant(), //
-        null, //
-        null, //
-        httpTrace.getLong("timeTaken")));
-        }
+                return new HttpTraceWrapper(new HttpTrace( //
+                        new HttpTrace.Request( //
+                                request.getString("method"), //
+                                URI.create(request.getString("uri")), //
+                                request.get("headers", Map.class), //
+                                null),
+                        new HttpTrace.Response( //
+                                response.getInteger("status"), //
+                                response.get("headers", Map.class)),
+                        httpTrace.getDate("timestamp").toInstant(), //
+                        null, //
+                        null, //
+                        httpTrace.getLong("timeTaken")));
+            }
         };
 ```
 
@@ -1061,6 +1163,8 @@ management:
 - HTTP 트레이스 데이터를 몽고디비에 저장하고 조회하는 코드 작성
 - 관리 서비스 경로 변경
 
+---
+
 # PART 6. 스프링 부트 API 서버 구축
 - JSON 기반 웹 서비스 구축
 - 스프링 REST Docs을 활용한 API 문서화
@@ -1078,18 +1182,19 @@ management:
 
 ## API 포털 생성
 
-**Spring REST Docs**은 API 문서화 작업을 도와준다  
+Spring REST Docs은 API 문서화 작업을 도와준다  
 사용자가 직접 사용해볼 수 있는 API 예제를 포함해서 API 문서를 쉽게 만들어낼 수 있다  
-여러 분야에서 사용성이 입증된 **Asciidoctor** 문서화 도구를 사용해서 세부 내용도 쉽게 문서로 만들 수 있다  
+여러 분야에서 사용성이 입증된 Asciidoctor 문서화 도구를 사용해서 세부 내용도 쉽게 문서로 만들 수 있다  
 
 ### API 문서화를 위한 asciidoc 사용 설정
-**Asciidoc**는 표준이고 **Asciidoctor**는 **Asciidoc** 표준을 **Ruby** 언어로 구현한 프로젝트이다
+Asciidoc는 표준이고 Asciidoctor는 Asciidoc 표준을 Ruby 언어로 구현한 프로젝트이다
 
-`asciidoctor-maven-plugin`은 확장자가 `.adoc`인 **Asciidoc** 파일을 **HTML**로 변환해준다  
+`asciidoctor-maven-plugin`은 확장자가 .adoc인 Asciidoc 파일을 HTML로 변환해준다  
 **Spring REST Docs**는 `Asciidoc`파일의 주요 내용을 자동으로 생성해준다  
-최종 HTML은 `target/generated-docs`에 저장된다  
+최종 HTML은 `target/generated-docs`에 저장된다
 
 Maven  
+
 ```xml
 <plugin>
   <groupId>org.asciidoctor</groupId>
@@ -1118,22 +1223,8 @@ Maven
 </plugin>
 ```
 
-Gradle  
-참조: https://subji.github.io/posts/2021/01/06/springrestdocsexample  
-참조: https://gaemi606.tistory.com/entry/Spring-Boot-REST-Docs-%EC%A0%81%EC%9A%A9%ED%95%98%EA%B8%B0  
-참조: https://velog.io/@hydroniumion/BE1%EC%A3%BC%EC%B0%A8-Spring-Rest-Docs-%EC%A0%81%EC%9A%A9%EA%B8%B0  
-참조: https://jaehun2841.github.io/2019/08/04/2019-08-04-spring-rest-docs/  
-참조: https://beemiel.tistory.com/13  
-참조(Kotlin): https://dwony26.tistory.com/134  
-최신버전 참조: https://velog.io/@max9106/Spring-Spring-rest-docs%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%9C-%EB%AC%B8%EC%84%9C%ED%99%94  
-최신버전 참조: https://eclipse4j.tistory.com/364  
-최신버전 참조(많은 도움됨): https://huisam.tistory.com/entry/RESTDocs  
-최신버전 참조(많은 도움됨): https://hhseong.tistory.com/212  
-Spring REST Docs: https://docs.spring.io/spring-restdocs/docs/current/reference/html5/  
-Asciidoctor Gradle Plugin Document: https://asciidoctor.github.io/asciidoctor-gradle-plugin/master/user-guide/  
-Asciidoc 기본 사용법: https://narusas.github.io/2018/03/21/Asciidoc-basic.html  
-Gradle Docs: https://plugins.gradle.org/plugin/org.asciidoctor.jvm.convert  
-우아한형제들 Spring Rest Docs 적용: https://techblog.woowahan.com/2597/  
+Gradle
+
 ```groovy
 plugins {
   ..
@@ -1189,13 +1280,32 @@ test {
 }
 ```
 
+- 참조
+  - https://subji.github.io/posts/2021/01/06/springrestdocsexample
+  - https://gaemi606.tistory.com/entry/Spring-Boot-REST-Docs-%EC%A0%81%EC%9A%A9%ED%95%98%EA%B8%B0
+  - https://velog.io/@hydroniumion/BE1%EC%A3%BC%EC%B0%A8-Spring-Rest-Docs-%EC%A0%81%EC%9A%A9%EA%B8%B0
+  - https://jaehun2841.github.io/2019/08/04/2019-08-04-spring-rest-docs/
+  - https://beemiel.tistory.com/13
+  - Kotlin: https://dwony26.tistory.com/134
+- 최신버전 참조
+  - https://velog.io/@max9106/Spring-Spring-rest-docs%EB%A5%BC-%EC%9D%B4%EC%9A%A9%ED%95%9C-%EB%AC%B8%EC%84%9C%ED%99%94
+  - https://eclipse4j.tistory.com/364
+  - 많은 도움됨: https://huisam.tistory.com/entry/RESTDocs
+  - 많은 도움됨: https://hhseong.tistory.com/212
+  - Spring REST Docs: https://docs.spring.io/spring-restdocs/docs/current/reference/html5/
+  - Asciidoctor Gradle Plugin Document: https://asciidoctor.github.io/asciidoctor-gradle-plugin/master/user-guide/
+  - Asciidoc 기본 사용법: https://narusas.github.io/2018/03/21/Asciidoc-basic.html
+  - Gradle Docs: https://plugins.gradle.org/plugin/org.asciidoctor.jvm.convert
+  - 우아한형제들 Spring Rest Docs 적용: https://techblog.woowahan.com/2597/
+
 **Spring REST Docs**는 기본적으로 `src/main/asciidoc`에서 Asciidoc 파일을 읽어서 주요 내용을 자동을 생성하므로  
 `src/main/asciidoc/index.adoc` 파일을 만들고 새 API 포털의 도입부를 직접 작성해야 한다
 
 ### spring-restdocs-webtestclient 의존관계 추가
 Spring WebFlux Controller를 테스트할 수 있게 해준다
 
-Maven
+Maven  
+
 ```xml
 <dependency>
     <groupId>org.springframework.restdocs</groupId>
@@ -1204,7 +1314,8 @@ Maven
 </dependency>
 ```
 
-Gradle
+Gradle  
+
 ```groovy
 dependencies {
     // Maven 과 같이 test Scope 에 대한 mockMvc 의존성을 추가 (WebClient, Assured 사용가능)
@@ -1347,6 +1458,8 @@ HAL로 표현되면 여전히 하나의 링크만 표시된다
 - 링크 정보 및 관련 세부정보를 추가해서 문서화 테스트 보완
 - 행동 유도성 소개 및 HAL-FORMS 형식 데이터와 데이터 템플릿 제공
 - Asciidoc snippet을 합쳐서 API 문서화 포털 구축
+
+---
 
 # PART 7. 스프링 부트 메시징
 - 스프링 부트에서 지원하는 다양한 메시징 솔루션
@@ -1537,740 +1650,4 @@ logging:
 - 동기적 웹 요청을 받아서 처리하는 웹플럭스 컨트롤러 작성
 - 블로킹 API 호출부를 감싸서 리액터의 엘라스틱 스레드 풀에서 실행
 - **RabbitTemplate**를 사용해서 비동기 메시지 브로커를 통해 메시지 전송
-- `@RabbitListener`를 사용해서 **RabbitMQ Listener**를 설정하고 전송받은 메시지를 소
-
-# PART 8. 스프링 부트 R소켓
-리액티브 스트림 프로그래밍을 지원하기 위해 바닥부터 새로 만들고 있는 프로토콜인 R소켓
-
-- Request, Response 클라이언트/서버를 구성하는 방법
-- 양쪽 모두에서 트래픽을 발생시킬 수 있는 양방향 서비스 구성
-
-## 리액티브 프로토콜 탄생
-R소켓(https://rsocket.io)은 HTTP, 웹소켓과 마찬가지로 OSI 7 계층 프로토콜이다  
-VMware, 페이스북, Netifi, Alibaba를 비롯한 여러 회사가 설립한 Reactive Foundation(https://reactive.foundation)에서 공동으로 만들었다  
-R소켓은 자바뿐만 아니라 자바스크립트, Go, .Net, C++, Kotlin을 지원하는 명세를 포함하고 있다
-
-> R소켓에서 사용되는 리액티브 스트림 자바 구현체는 리액터다
-> 그래서 이 책을 통해 지금까지 배운 내용은 R소켓을 익히는 데도 도움이 된다
-> 리액티브 스트림 커뮤니티에서는 여러 도구 사이의 상호운용성도 보장해 줄 정도로 R소켓을 더욱 발전시켰으며
-> R소켓과 스프링 부트에서 리액터가 공통적으로 사용된다는 점은 큰 장점이다
-
-R소켓은 웹소켓, TCP, Aeron등 여러 가지 프로토콜 위에서 동작하도록 설계됐다  
-웹소켓은 아주 가볍고 유연해서 R소켓이 필요로하는 모든 것을 지원한다
-
-TCP는 OSI 4계층에 위치하는 강력한 프로토콜이다  
-HTTP는 TCP의 연결 관리를 사용해서 TCP 위에서 동작한다  
-R소켓도 TCP를 사용해서 장애내성(fault-tolerant)과 확장성을 가진 리액티브 연결을 만들 수 있다
-
-Aeron은 UDP 위에서 동작하는 메시징 프로토콜이다  
-UDP는 신뢰성 있는 연결을 필요하지 않는 프로토콜이다  
-리액터 애플리케이션은 작업 부하(workload) 사이를 오가는 워커 스레드를 사용하므로  
-작업 부하가 여러 가지 메시지로부터 만들어진다는 사실은 어렵지 않게 유추할 수 있다
-
-## R소켓 패러다임
-R소켓은 단순히 연결에 사용되는 채널에 다른 API를 추가한 것이라고 이해할 수 있따
-
-- 요청-응답(1개의 스트림)
-- 요청-스트림(다수의 유한한 스트림)
-- 실행 후 망각(fire-and-forget)(무응답)
-- 채널(양방향)
-
-### 요청-응답
-실제로 통신에서 일반적으로 필요한 요구사항의 80%는 요청-응답 방식으로 해결할 수 있다
-
-### 요청-스트림
-한 번의 요청을 보내고 스트림 형태로 응답을 계속 받을 수 있으므로 좀 더 효율적인 요청 방식이다  
-주식 종목의 가격 정보를 요청하고 변화되는 주식 가격을 스트림 형태로 계속 응답받는 상황이
-요청-스트림 방식의 대표적인 사례라고 할 수 있다
-
-### 실행 후 망각
-요청을 보내고 나서 응답은 신경 쓰지 않는 뒤끝 없는 방식이지만 별로 대단해 보이지는 않을 수도 있다
-
-### 채널
-클라이언트와 서버는 다음과 같은 세가지 선택지를 가지고 있다
-
-- 응답 대기
-- 응답 대기 안 함
-- 무한 응답 대기
-
-채널 패러다임은 진정한 message-driven 양방향 통신 채널을 실현한다  
-채널의 어느 쪽이든 상대방에게 메시지를 전송할 수 있고  
-양쪽 모두 리액티브 메시지 Listener를 반드시 등록해야 한다
-
-## R소켓 서버생성
-
-Maven
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-rsocket</artifactId>
-</dependency>
-```
-
-Gradle
-```groovy
-implementation 'org.springframework.boot:spring-boot-starter-rsocket'
-```
-
-의존관계를 통해 추가되는 기능
-
-- RSocket Core와 Transport Netty
-- Reactor Netty
-- Spring Messaging
-- Jackson
-
-세가지 주요 요소
-
-1. **R소켓**: 자바로 구현된 R소켓 프로토콜
-2. **리액터 네티**: 네티는 리액티브 메시지 관리자 역할도 충분히 수행할 수 있다
-   리액터로 감싸져서 더 강력한 서버로 만들어졌다
-3. **스프링 + Jackson**: 메시지가 선택되고 직렬화되며 전송되고 역직렬화되고 라우팅되는 것은 프로토콜 리액티브 속성만큼이나 중요하다
-   스프링의 입증된 메시지 처리 아키텍처와 Jackson을 함께 사용하는 사례는 무수히 많으며 현장에서 충분히 검증됐다
- 
-> Spring Messaging은 스프링 프레임워크의 패러다임으로서 Spring Integration, Spring AMQP, Spring for Apache Kafka
-> Spring Cloud Stream을 포함하는 다양한 스프링 포트폴리오 프로젝트에서 사용돼왔다                             
-> 메시지 본문을 받아서 헤더를 추가하고 비동기로 전송하고 필터링하고 압축을 푸는 개념은 메시지를 받는 쪽에서도 널리 사용되고 있다
-
-**FluxProcessor** 클래스의 요구사항 정의
-
-- 가장 최근 메시지만 보내야 한다면 **EmitterProcessor**가 필요
-- 최근 N개의 메시지를 보관하고 새로운 구독자에게 **N**개의 메시지를 모두 보내야 한다면
-  **ReplayProcessor**가 필요하다
-- 단 하나의 컨슈머만을 대상으로 한다면 **UnicastProcessor**가 필요하다
-
-### EmitterProcessor
-누군가 구독했을 때 최근 메시지만 보내는 Processor
-
-> FluxProcessor와 EmitProcessor는 스프링 리액터 3.4에서 Deprecated되었고 3.5부터는 제거 예정이다
-> 스프링 부트의 최신 안정 버전은 2021 9월 현재 2.5.4이며 스프링 리액터 3.4.9가 사용되므로 FluxProcessor와 EmitterProcessor를 
-> 사용하는 예제 코드는 스프링 부트 2.5에서도 유효할 것으로 보인다
-> 다만 스프링 부트 2.5.4 기준으로 Deprecated 상태이므로 API 문서에 나오는 내용을 토대로 Sinks를 사용한 대체 구현 코드를 주석으로 추가한다
-
-**EmitterProcessor**는 단지 Flux를 상속받은 특별한 버전의 Flux  
-리액티브 스트림이 사용되는 곳 어디에나 **EmitterProcessor**를 전달할 수 있고  
-새 Item 객체를 주입하는 동안 구독하게 할 수 있다
-
-> R소켓 프로토콜 덕분에 전체 리액티브 스트림 체인이 네트워크를 넘어서도 동작할 수 있으므로
-> 처리 과정 중에 무언가 잘못되면 Mono.error()가 전달된다
-> 이를 통해 요청을 보낸 쪽에서 무언가 잘못됐다는 알림을 받을 수 있다는 점은 요청-응답 방식과 실행 후 망각 방식이 같다
-> 하지만 모든 작업이 적절하게 완료됐을 때 수행되는 일은 요청-응답 방식과 실행 후 망각 방식에서 다르다
-> 이는 개발자와 비즈니스 로직에 달려 있다
-
-
-> 리액터 네티 컨테이너를 실행하면 스프링 부트는 자동으로 리액터 네티 컨테이너를 사용해서 TCP R소켓 서비스를 호스팅한다
-> 이 방법이 가장 간단하므로 여기에서도 이 방법을 택한다
-
-### 몽고디비 실행
-실습을 위해 몽고디비가 필요하다
-
-아래의 도커명령어를 실행해서 몽고디비를 실행하자
-
-```bash
-docker run -p 27017-27019:27017-27019 mongo
-```
-
-### 애플리케이션 실행
-R소켓 포트는 7000, 서버 메인 포트는 9000로 구동되며 도메인 객체를 탐색하고  
-몽고디비에 연결한 후에 스프링 부트 액추에이터도 활성화 한다
-
-## R소켓 클라이언트 생성
-R소켓 클라이언트는 외부로부터 HTTP 요청을 받아서 R소켓 연결을 통해 백엔드 서버로 요청을 전달한다  
-그래서 HTTP 요청을 받을 수 있는 WebFlux 컨트롤러가 필요하다
-
-R소켓에 스프링의 메시징 패러다임은 포함되지 않았다  
-**RSocketRequester**를 사용해야 스프링 프레임워크와 연동된다  
-이렇게 하면 도착지를 기준으로 라우팅할 수 있다  
-그리고 보너스로 트래픽의 인코딩/디코딩도 쉽게 할 수 있다  
-**RSocketRequester**를 사용하지 않으면 클라이언트와 서버 양쪽의 모든 R소켓 연결에서 데이털르 직접 관리해야 한다
-
-리액터의 **Mono** 패러다임은 연결을 R소켓 연결 세부정보를 포함하는 지연 구조체로 전환한다  
-아무도 연결하지 않으면 R소켓은 열리지 않는다  
-누군가 구독을 해야 세부정보가 여러 구독자에게 공유될 수 있다
-
-하나의 R소켓만으로 모든 구독자에게 서비스할 수 있다는 점도 중요하다  
-R소켓을 구독자마다 1개씩 만들 필요가 없다  
-대신에 하나의 R소켓 파이프에 대해 구독자별로 하나씩 연결을 생성한다
-
-이렇게 준비 과정을 마쳐야 R소켓이 네트워크를 통해 오가는 데이터 프레임을 리액티브하게 전송하고 배압을 처리하는 데 집중할 수 있다
-
-### 웹플럭스 요청을 R소켓 요청-응답으로 전환
-스프링 웹플럭스와 R소켓 API가 모두 프로젝트 리액터를 사용하는 덕분에 둘을 아주 매끄럽게 함께 사용할 수 있다  
-둘은 하나의 플로우 안에서 체이닝으로 연결될 수 있어서 HTTP 웹요청을 받아서 R소켓 연결에 전달하고 응답을 받아서  
-클라이언트에 리액티브하게 반환할 수 있다
-
-요청-응답 서비스와 클라이언트는 테스트하기도 편리하다
-
-### 웹플럭스 요청을 R소켓 요청-스트림으로 전환
-스트림을 반환해야 하므로 데이터를 `Mono<ResponseEntity>`에 담지 않고 **Flux**에 담아 반환한다  
-미디어 타입도 `application/x-ndjson`으로 지정해야 스트림 방식으로 반환할 수 있다  
-**ndjson**은 **Newline Delimited JSON**의 약자인데 결국 여러 **JSON** 객체를 줄바꿈으로 구분해서 여러 번에 걸쳐 스트림으로 반환한다는 뜻이다
-
-검증 첫 부분에 **StepVerifier**가 나오지 않고 `returnResult()`, `getResponseBody()`를 통해 일단 플로우에서 빠져나온 다음에  
-**StepVerifier**를 사용해서 검증을 시작한다
-
-### 웹플럭스 요청을 R소켓 실행 후 망각으로 전환
-함수형 프로그래밍에서 비어 있는 Void를 무시하는 것은 `map()`이나 `flatMap()`이나 마찬가지다  
-그래서 `Mono<Void>`를 `map()`이나 `flatMap()`을 사용해서 다른 것으로 전환하는 것은 불가능하다
-
-### 웹플럭스 요청을 R소켓 채널로 전환
-R소켓의 양방향 채널 지원을 테스트
-이벤트 흐름을 구독할 수 있는 단일 메시지를 전송하는 예제 
-
-클라이언트 애플리케이션을 재실행하고 터미널에서 `curl -v localhost:8080/items`를 실행하면  
-클라이언트로부터의 결과를 기다린다  
-앞에서 작성한 두 가지 테스트 케이스를 실행하면 `curl` 실행 중인 터미널에 새로 생성된 Item 결과가 표시되는 것을 볼 수 있다
-
-`curl` 명령을 실행하면 R소켓 클라이언트가 **Content-Type** 헤더값이 `text/event-stream`인 스트림을 응답한다  
-스트림 응답을 받으면 `curl`은 전체 결과를 모두 가져올 수 있을 때까지 기다렸다가 모두 받은 후 실행을 종료하는 방식으로 동작하지 않고  
-결괏값이 생길 때 마다 결과를 화면에 표시하고 실행을 종료하지 않고 추가로 응답을 받을 수 있는 대기 상태로 남는다
-
-새 Item을 몽고디비에 저장한 후 요청-응답 방식처럼 반환하고 끝내는 것이 아니라  
-양방향 채널을 통해 결괏값을 지속적으로 보내는 동작 방식을 보여준다
-
-> R소켓 클라이언트 애플리케이션을 재실행하고 앞에서 작성한 요청-응답, 요청-스트림, 실행 후 망각 방식 테스트 케이스를 실행하면서
-> 실질적으로 R소켓 애플리케이션 인스턴스를 또 실행하는 구조라서 불필요하게 복잡해 보인다
-> R소켓 클라이언트 애플리케이션을 재실행하고, 터미널(A)에서 curl -v localhost:8080/items를 실행해서 R소켓 클라이언트로부터 들어오는
-> 스트림을 받을 수 있게 해두고, 별도의 새 터미널(B)에서 ㄷ4ㅏ음 명령을 각각 실행해서 R소켓 클라이언트에 요청을 보내면
-> R소켓 클라이언트 애플리케이션 인스턴스를 1개만 띄우고도 거의 같은 시나리오로 동작한다
-
-A 터미널에서 `curl -v localhost:8080/items`를 실행하면 다음과 같이 응답을 대기한다
-```bash
-$ curl -v localhost:8080/items
-*   Trying ::1...
-* TCP_NODELAY set
-* Connected to localhost (::1) port 8080 (#0)
-> GET /items HTTP/1.1
-> Host: localhost:8080
-> User-Agent: curl/7.64.1
-> Accept: */*
-> 
-< HTTP/1.1 200 OK
-< transfer-encoding: chunked
-< Content-Type: text/event-stream;charset=UTF-8
-<
-```
-
-B 터미널에서 다음과 같이 **요청-응답** 쪽에 Item 생성 요청을 전송하면 다음과 같이 생성된 Item 데이터가 결과로 표시된다
-```bash
-$ curl -X POST -H "Content-Type:application/json" localhost:8080/items/request-response -d "{\"name\":\"Alf alarm clock\",\"description\":\"nothing important\",\"price\":19.99}"
-{"id":"6148b752e2921e0fdafa7475","name":"Alf alarm clock","description":"nothing important","price":19.99}%
-```
-
-A 터미널에도 다음과 같이 생성된 Item 데이터가 결과로 표시된다
-```bash
-< HTTP/1.1 200 OK
-< transfer-encoding: chunked
-< Content-Type: text/event-stream;charset=UTF-8
-< 
-data:{"id":"6148a9dde2921e0fdafa7472","name":"Alf alarm clock","description":"nothing important","price":19.99}
-```
-
-B 터미널에 다음과 같이 **실행 후 망각** 쪽으로 Item 생성 요청을 전송하면 Item 데이터 없이 헤더 정보만 결과로 표시 된다
-```bash
-$ curl -X POST -H "Content-Type:application/json" -i localhost:8080/items/fire-and-forget -d "{\"name\":\"Smurf TV tray\",\"description\":\"kids TV tray\",\"price\":24.99}"
-HTTP/1.1 201 Created
-Location: /items/fire-and-forget
-content-length: 0
-```
-
-A 터미널에도 다음과 같이 생성된 Item 데이터가 결과로 표시된다
-```bash
-< HTTP/1.1 200 OK
-< transfer-encoding: chunked
-< Content-Type: text/event-stream;charset=UTF-8
-< 
-data:{"id":"6148a9dde2921e0fdafa7472","name":"Alf alarm clock","description":"nothing important","price":19.99}
-
-data:{"id":"6148b892e2921e0fdafa7476","name":"Smurf TV tray","description":"kids TV tray","price":24.99}
-```
-
-이제 B 터미널에서 **요청-스트림** 조회 요청을 전송하면 앞에서 저장된 2건의 Item 정보가 1초에 1개씩 표시되는 것을 확인할 수 있다
-```bash
-$ curl -H "Accept:application/x-ndjson" localhost:8080/items/request-stream
-{"id":"6148b64be2921e0fdafa7473","name":"Alf alarm clock","description":"nothing important","price":19.99}
-{"id":"6148b892e2921e0fdafa7476","name":"Smurf TV tray","description":"kids TV tray","price":24.99}
-```
-
-A 터미널에서는 2건의 Item 정보가 한 번에 표시된다  
-왜냐하면 A 터미널에 표시되는 **/items** 쪽에는 `delayElements()`를 추가하지 않았기 때문이다
-
-예제는 한쪽에서 요청을 보내고 다른 한쪽은 응답을 반환하고 있지만 실제로는 양방향이기 때문에  
-양쪽 모두 서로에게 요청을 보내고 응답을 받을 수 있다
-
-> 예제 코드에서는 R소켓 사용 방식을 URI에 포함했지만 실제 애플리케이션에서는 fire-and-forget이나 request-response 같은 이름을
-> URI로 사용하지는 않을 것이다
-> 대신에 newItem.save 같은 비즈니스 기능을 이름으로 사용해서 의도를 더 분명히 나타낼 수 있다
-
-## 8장에서 배운 내용
-- 네 가지 R소켓 패러다임: 요청-응답, 요청-스트림, 실행 후 망각, 채널
-- 네티를 웹 컨테이너로 사용하고 TCP를 전송 프로토콜로 사용하는 R소켓 서버 생성
-- 웹 요청을 R소켓을 통해 전달하는 R소켓 클라이언트 설정
-- 스프링 포트폴리오와 리액터를 활용해서 기능적 코드와 전송 프로토콜인 R소켓을 매끄럽게 연동하는 방법
-
-# PART 9. 스프링 부트 애플리케이션 보안
-- 다양한 사용자 정보 저장소를 사용하는 스프링 시큐리티 설정
-- HTTP 엔드포인트에 라우트 기반 보안 설정 적용
-- 리액티브 엔드포인트에 메소드 수준 보안 적용
-- 권한 검사를 위한 스프링 시큐리티 컨텍스트 연동
-
-## 스프링 시큐리티 시작하기
-
-### 스프링 부트 프로젝트에 스프링 시큐리티 의존관계 추가
-
-Maven
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-security</artifactId>
-</dependency>
-
-<dependency>
-    <groupId>org.springframework.security</groupId>
-    <artifactId>spring-security-test</artifactId>
-    <scope>test</scope>
-</dependency>
-```
-
-Gradle
-```groovy
-implementation 'org.springframework.boot:spring-boot-starter-security'
-testImplementation 'org.springframework.security:spring-security-test'
-```
-
-서버기동시 password 출력
-```bash
-Using generated security password: 76944ff8-5790-4f9a-b749-823ed6ee61c1
-```
-
-기본 로그인    
-- username: user
-- passworkd: 76944ff8-5790-4f9a-b749-823ed6ee61c1(무작위로 생성된 PASSWORD)
-
-스프링 시큐리티는 다음과 같은 다중 계층 방식으로 광범위한 보안을 적용  
-- 여러가지 필터가 생성되고 적절한 순서로 등록된다
-- 웹 페이지에 다양한 지시어가 추가된다
-  - 바람직하지 않은 정보가 브라우저 캐시에 유입되는 것 방지
-  - clickjacking(https://owasp.org/www-community/attacks/Clickjacking, https://ko.wikipedia.org/wiki/%ED%81%B4%EB%A6%AD%EC%9E%AC%ED%82%B9)
-  - session fixation(https://owasp.org/www-community/attacks/Session_fixation, https://anjoliena.tistory.com/10)
-  - XSS projections(https://owasp.org/www-community/attacks/xss/, https://ko.wikipedia.org/wiki/%EC%82%AC%EC%9D%B4%ED%8A%B8_%EA%B0%84_%EC%8A%A4%ED%81%AC%EB%A6%BD%ED%8C%85)
-  - 등 보안 위험 방어
-  - 서버 응답에 적절한 보안 헤더 추가
-  - Cross Site Request Forgery, CSRF(https://owasp.org/www-community/attacks/csrf, https://ko.wikipedia.org/wiki/%EC%82%AC%EC%9D%B4%ED%8A%B8_%EA%B0%84_%EC%9A%94%EC%B2%AD_%EC%9C%84%EC%A1%B0
-    방지 활성화
-
-## 실무 적용
-개발자가 작성한 몽고디비 리포지토리와 스프링 시큐리티를 연결해서 사용자 세부정보를 스프링 시큐리티를 통해 관리할 수 있게됨
-
-SecurityConfig 클래스에서 MongoOperations를 사용해서 미리 저장해둔 사용자 정보로 로그인하면 된다
-
-> 자동설정을 통해 MongoOperations 빈을 사용하려면 pom.xml 파일에 mongodb-driver-sync 의 의존관계를 추가해야 한다
-> 그렇지 않으면 리액티브 스프링 데이터 몽고디비 스타터는 기본적으로 MongoOperations가 아니라 ReactiveMongoOperations 빈을 사용한다
-
-- Username에 'greg', Password에 'password'를 입력하고 Sign in 버튼을 클릭해서 로그인한다
-- 로그인이 성공하면 초기 페이지로 다시 리다이렉트 된다
-
-스프링 부트는 스프링 시큐리티가 제공하는 `@EnableWebFluxSecurity` 애너테이션을 적용할지 말지 결정한다  
-`@EnableWebFluxSecurity`가 적용되면 스프링 시큐리티는 기본적으로 다음 기능을 활성화 한다  
-- HTTP BASIC을 활성화해서 cURL 같은 도구로도 계정명/비밀번호 값을 전송할 수 있다
-- HTTP FORM을 활성화해서 로그인되지 않은 사용자는 브라우저의 기본 로그인 팝업 창 대신에
-  스프링 시큐리티가 제공하는 로그인 페이지로 리다이렉트한다
-- 사용자가 로그인에 성공해서 인증이 완료되면 애플리케이션의 모든 자원에 접근 가능하다
-  이는 인증만 받으면 애플리케이션 자원에 접근하기 위해 추가적인 허가가 필요하지 않음을 의미한다
-
-> 스프링 부트는 개발자가 무엇을 하려는지 추측을 하고 그에 따라 필요한 빈을 자동설정을 통해 등록한다
-> 그래서 클래스패스에 웹플럭스가 있으면 리액터 네티 인스턴스를 실행하고 몇 가지 뷰 리졸버를 자동으로 사용할 수 있게 해준다
-> 하지만 스프링 시큐리티는 설정 방법이 매우 다양하고 애플리케이션마다 천차만별이라서 스프링 시큐리티가 클래스패스에 있다는 것만으로 절절한 추측을 하는 것이 사실상 불가능하다
-
-> 스프링 부트 1.X 버전까지는 어느 정도 추측을 하고 일정한 선택지를 제공했다
-> 하지만 스프링 부트가 하려는 것과 스프링 시큐리티가 하려는 것을 파악하기가 쉽지 않다
-> 그래서 2.X 버전부터는 스프링 부트는 스프링 시큐리티를 단순히 활성화하는 역할만 맡는다
-> 하지만 @EnableWebFluxSecurity를 직접 명시할 때 생성되는 WebFilterChainProxy 빈을 찾으면 스프링 부트는 스프링 시큐리티 설정과 관련한 권한을 개발자에게 모두 넘겨준다
-
-> 이번 절의 예제에서처럼 개발자가 만든 ReactiveUserDetailsService를 사용해도 기본값이 사용되는 것을 허용한다
-> 스프링 시큐리티는 기존의 의존관계 주입을 통해서 여러 빈이 등록되는 것을 허용한다
-> 하지만 다음 절부터 알아볼 여러 가지 정책을 지정하면서 스프링 부트는 결국 개발자에게 운전석을 넘겨준다
-
-## 스프링 시큐리티 커스텀 정책
-스프링 시큐리티는 개발자가 만든 커스텀 필터를 끼워 넣을 수 있도록 다양한 주입점을 제공한다
-
-> 스프링 웹플럭스에는 서블릿이 사용되지 않는다
-> 그래서 javax.servlet.Filter 훅(hook)을 사용할 수 없다
-> 하지만 필터링은 웹 애플리케이션에서는 매우 쓸모가 많은 패러다임이다
-> 그래서 스프링 웹플럭스는 서블릿과는 다른 버전의 필터 API인 WebFilter를 제공하며 스프링 시큐리티에서도 WebFilter를 만들어 제공함으로써 웹플럭스를 지원한다
-
-> HTTP BASIC을 허용한다면 HTTP 연결이 SSL(Secure Socket Layer) 같은 것으로 보호돼야 한다
-> HTTP BASIC에서는 계정명과 비밀번호는 ':'로 이어져서 Base64로 인코딩되어 전송되며 이는 쉽게 복원해서 비밀번호를 알아낼 수 있다
-> 따라서 SSL로 보호되지 않는다면 비밀번호를 쉽게 탈취당할 수 있다
-
-### 역할과 권한
-스프링 시큐리티는 어떤 기능을 수행하는 데 필요한 적절한 권한을 가지고 있는지 확인한다  
-이를 위한 가장 간단하면서도 가장 널리 사용되는 구현 방법은 사용자가 가지고 있는 **역할(role)** 목록에 있는 값을 확인하는 것이다  
-예를 들어, 특정 URL에는 **ADMIN** 역할 값을 가진 사용자만 접근을 허용하게 설정할 수 있다  
-역할 앞에 접두어 **ROLE_**을 붙인 **ROLE_ADMIN** 문자열을 **권한(authority)**이라고 부른다
-
-하지만 앞에 접두어 **ROLE_**을 붙이는 것이 일상적인 패러다임이 됨에 따라 스프링 시큐리티에서는 단순히 사용자가 역할을 가지고  
-있는지만 검사하는 API가 많이 있다  
-**ROLE_ADMIN**은 **권한**이고, **ADMIN**은 그 권한의 **역할**이 된다
-
-> 보안 규칙을 하나 만들 때마다 지금처럼 실패하는 테스트와 성공하는 테스트, 이렇게 최소한 2개의 테스트 케이스를 작성해야 한다
-> 이제 POST 요청에 적용된 규칙을 테스트해봤으므로, DELETE 요청에 적용된 규칙도 테스트가 필요하다
-
-## 사용자 컨텍스트 접근
-> 메소드나 변수의 노출을 최소화해야 한다는 관점에 대단히 찬성하는 입장이다  
-> 노출 최소화는 메소드나 변수를 `private`으로 선언하는 것을 의미한다  
-> **Authentication** 객채를 받아서 장바구니 이름을 반환하는 로직은 이 클래스 밖에서는 사용할 일이 없으므로 `private`으로 선언했다  
-> 하지만 이 코드를 가져가서 용도에 맞게 수정하고 여러 가지 서비스를 추가해서 이 클래스 밖에서도
-> 이 메소드 호출이 필요해진다면 `private` 대신 `protected`나 `public`으로 가시성을 확장해도 된다 
-
-**Authentication** 객체를 템플릿의 모델로 추가하면 사용자 컨텍스트 정보를 보여줄 수 있게 된다는 확실한 장점이 추가된다
-
-## 메소드 수준 보안
-- 컨트롤러 클래스를 변경하면 시큐리티 정책도 함께 변경해야 한다
-- 컨트롤러가 추가될수록 SecurityWebFilterChin 빈에 추가해야할 규칙도 금세 늘어난다
-- 웹 엔드포인트와 직접적으로 연결되지는 않지만 역할 기반의 보안 규칙을 적용할 수 있다면 좋지 않을까?
-
-이런 이슈를 해결하기 위해 메소드 수준 보안(method level security) 방식이 등장했다
-
-스프링 시큐리티 애너테이션을 메소드에 직접 명시해서 비즈니스 로직이 있는 곳에 필요한 보안 조치를 직접 적용할 수 있다  
-수십 개의 컨트롤러의 수많은 URL에 대한 보안 규칙을 SecurityConfig에 정의하는 대신에  
-비즈니스 로직에 따라 적절한 보안 규칙을 비즈니스 로직 바로 곁에 둘 수 있다
-
-### 메소드 수준 보안 활성화 
-```java
-@Configuration
-// 메서드 수준 보안 활성화
-@EnableReactiveMethodSecurity
-public class SecurityConfig {
-    
-}
-```
-
-### Spring HATEOS 설정 추가
-Maven
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-hateoas</artifactId>
-    <exclusions>
-        <exclusion>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </exclusion>
-    </exclusions>
-</dependency>
-```
-
-Gradle
-```groovy
-implementation("org.springframework.boot:spring-boot-starter-hateoas"){
-    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-web'
-}
-```
-
-> 앞에서 변수를 `private`으로 선언하는 이유를 언급한 적이 있다
-> 다른 옵션은 자바의 기본 접근 지정자를 적용하는 것이다
-> **SecurityCOnfig** 클래스에서 **USER** 변수를 `static final String USER = "USER"`로 정의했다
-> `public`을 제거하고 아무런 **접근 지정자**(**access modifier**)를 지정하지 않으면
-> **USER** 변수는 동일 패키지 내에 있는 클래스에서만 접근할 수 있게 된다
-
-> 애플리케이션 개발 초기 단계에서는 이 방식을 사용하는 것이 좋다
-> 애플리케이션이 점점 규모가 커질 때 외부 컴포넌트로부터의 커플링을 많이 줄일 수 있다
-> 그리고 `public`은 의도적으로 지정해야만 추가되므로 무심결에 외부에 노출하는 일이 없어지고
-> `public`이 붙은 것들은 모두 의도적으로 노출하는 것이라고 판단할 수 있게 된다
-
-> HAL(Hypertext Application Language) 문서에는 조회/추가/수정이 모두 똑같은 링크로 표현된다
-> HAL은 HTTP 동사를 알지 못하기 때문에 이런 이슈가 발생하며
-> 예제에서는 이 이슈를 피하기 위해 조금 다른 방식으로 URI를 구성했다
-
-`@PreAuthorize`는 메소드 수준 보안에 관해서는 스프링 시큐리티의 중심 타자라고 할 수 있다  
-더 복잡한 표현식을 사용할 수도 있으며 심지어 메소드 인자를 사용할 수도 있다  
-또한 `@PreAuthorize`를 사용하면 메소드 호출 후에 보안 규칙을 적용할 수도 있다  
-중요 결정 사항이 포함된 핵심 내용이 반환되는 경우 `@PostAuthorize`를 사용하면 좋다  
-스프링 시큐리티 **SpEL** 표현식에 단순히 `returnObject`를 사용해서 반환값을 참조하면 된다  
-하지만 데이터베이스를 수정하고 반환값으로 제어하는 것은 비용이 든다
-
-결과 목록을 반환받은 후에 필터링을 하고 싶다면 `@PostFilter`를 사용할 수 있다  
-이렇게 하면 현재 사용자가 볼 수 있도록 인가되지 않은 데이터를 반환 목록에서 필터링해서 제외할 수 있다  
-편리하긴 하지만 결국 필터링될 데이터를 포함해서 많은 양의 데이터를 조회하는 것 자체가 비효율적이다  
-그래서 스프링 데이터는 **Authentication** 객체를 사용해서 현재 사용자가 볼 수 있는 데이터만 조회하는 기능을 지원한다
-
-> 스프링 시큐리티와 스프링 데이터의 통합은 `@Query` 애너테이션을 사용할 때만 적용된다
-
-보안 관점에서 가장 중요한 첫 번째 원칙은 권한이 부족한 사용자가 인가받지 않은 기능을 사용하지 못하게 하는 것이다  
-**ROLE_INVENTORY** 권한을 가진 사용자만 시스템 재고를 변경하는 기능을 수행할 수 있다
-
-보안 관점에서 두번째로 중요한 원칙은 첫 번째 원칙을 위배할 수 있는 어떤 단서도 사용자에게 보여주지 않는 것이다  
-하이퍼미디어 관점에서는 인가받지 못한 사용자가 접근할 수 없는 링크는 제공하지 말아야 함을 의미한다
-
-## OAuth 보안
-OAuth는 안전한 위임 접속(secure delegated access)을 보장하는 공개 프로토콜이다
-서드파티 앱에서 소셜 미디어 네트워크 사이트의 로그인 페이지를 띄워주며,  
-소셜 미디어 네트워크 사이트에서 로그인을 하면, 보안 토큰이 서드파티 앱에 전달되고,  
-서드파티 앱은 그 이후로는 사용자의 인증 정보가 아니라 보안 토큰을 통해 소셜 미디어 네트워크에 있는 사용자의 데이터에 접근할 수 있게 된다  
-서드파티 앱은 인증 정보를 관리할 필요 없이 오로지 토큰만 사용하면 된다  
-토큰에는 만기(expiration), 갱신(refresh)등의 핵심 기능이 포함돼 있다
-
-### OAuth 적용에 필요한 의존관계
-Maven
-```xml
-<dependency>
-    <groupId>org.springframework.security</groupId>
-    <artifactId>spring-security-config</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.security</groupId>
-    <artifactId>spring-security-oauth2-client</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.security</groupId>
-    <artifactId>spring-security-oauth2-jose</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.thymeleaf.extras</groupId>
-    <artifactId>thymeleaf-extras-springsecurity5</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.security</groupId>
-    <artifactId>spring-security-test</artifactId>
-    <scope>test</scope>
-</dependency>
-```
-
-Gradle
-```groovy
-// Spring Security
-// 컨트롤러에서 스프링 시큐리티 설정 애너테이션과 타입을 사용하기 위해 필요
-implementation 'org.springframework.security:spring-security-config'
-// 우리가 만드는 애플리케이션 OAuth 클라이언트로서 OAuth 프로바이더와 통신할 때 필요
-implementation 'org.springframework.security:spring-security-oauth2-client'
-// JOSE(Javascript Object Signing and Encryption)를 사용할 때 필요
-implementation 'org.springframework.security:spring-security-oauth2-jose'
-implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity5'
-testImplementation 'org.springframework.security:spring-security-test'
-```
-
-### OAuth 프로바이더인 구글에 새 애플리케이션 등록
-1. https://developers.google.com/identity/protocols/oauth2/openid-connect 접속
-2. Credentials page 클릭
-
-![1](img/1.png)   
-
-3. 프로젝트 만들기 클릭
-
-![2](img/2.png)
-
-4. 프로젝트 이름은 **hacking-spring-boot-reactive** 로 입력하고 만들기 클릭
-
-![3](img/3.png)
-
-![4](img/4.png)
-
-5. **사용자 인증 정보 만들기**를 클릭하고 **OAuth 클라이언트 ID**를 클릭한다
-
-![5](img/5.png)
-
-6. **동의 화면 구성**을 클릭한다
-
-![6](img/6.png)
-
-7. **User Type**에서 **외부**를 선택하고 **만들기**를 클릭한다
-
-![7](img/7.png)
-
-8. 등록할 앱 기본 정보를 입력한다
-   앱 이름은 **hacking-spring-boot-reactive-oauth-app**, 이메일 같은 필수 정보만 입력하면 된다
-
-![8](img/8.png)
-
-9. 범위 지정 화면에서는 그대로 **저장 후 계속**을 클릭한다
-
-![9](img/9.png)   
-
-10. 테스트 사용자를 추가한다
-    테스트 사용자는 이메일을 입력해야 한다
-
-![10](img/10.png)
-
-11. 요약 화면이 표시되며 앱 등록 내용을 확인할 수 있다
-
-![11](img/11.png)
-
-12. 좌측 메뉴에서 **사용자 인증 정보**를 클릭하고 **사용자 인증 정보 만들기**를 클릭해서 **OAuth 클라이언트 ID**를 클릭한다
-
-![12](img/12.png)
-
-13. OAuth 클라이언트 ID를 만드는 데 필요한 정보를 입력한다
-    **승인된 리디렉션 URI**란에는 http://localhost:8080/login/oauth2/code/google을 입력하고 **만들기**를 클릭한다
-
-![13](img/13.png)
-
-14. 다음과 같이 클라이언트 ID, 클라이언트 보안 비밀번호가 생성되고 화면에 표시된다
-
-![14](img/14.png)
-
-15. 클라이언트 ID, 클라이언트 비밀번호는 나중에 다음과 같이 확인할 수도 있다
-
-![15](img/15.png)
-
-![16](img/16.png)
-
-### application.yml 파일에 OAuth 클라이언트 정보 입력
-```yaml
-spring:
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: GOOGLE_CLIENT_ID # 실제 구글에서 발급받은 client-id로 대체해야함
-            client-secret: GOOGLE_CLIENT_SECRET # 실제 구글에서 발급받은 client-secret으로 대체해야함
-```
-
-애플리케이션을 실행하고 http://localhost:8080 에 접속하면 구글 로그인 화면으로 리다이렉트 된다  
-로그인 후 OAuth 세부정보가 표시되는 것을 확인할 수 있다
-
-![17](img/17.png)
-
-![18](img/18.png)
-
-![19](img/19.png)
-
-OAuth2를 사용하는 주된 이유는 사용자 정보 관리를 위임할 수 있기 때문이다  
-보안 문제 발생빈도를 생각해보면 사용자 정보 관리를 직접 하기보다, 구글, 페이스북, 옥타, 깃허브처럼 이미 안전하게  
-관리하고 있는 곳에 위임하는 것도 꽤 현명한 생각이다
-
-### 주요 OAtuh 프로바이더별 장단점
-- 구글과 페이스북은 가장 널리 사용되는 서비스이며 대부분의 사용자는 이 두 서비스의 계정을 가지고 있을 것이다
-- 깃허브 계정이 없는 개발자는 많지 않을 것이다
-  애플리케이션의 주 사용자가 개발자라면 깃허브에 위임하는 것도 좋다
-- 옥타는 세밀한 세용자 제어가 필요한 상황에서는 편리하지만, 필요 이상으로 복k잡하게 느껴질 수도 있다
-
-> 애플이나 트위터또는 다른 OIDC 프로바이더는 사용할 수 있지만 스프링 시큐리티에서 지원하고 있지 않아서 조금 손이 더 간다
-> OAuth 프로바이더가 제공하는 자료와 스프링 시큐리티에서 구글, 페이스북, 깃허브, 옥타를 지원하는 소스코드를 살펴보면
-> 어렵지 않게 스프링 시큐리티의 OIDC 속성값을 찾아서 연동할 수 있을 것이다
-
-### 커스텀 스코프
-사용자 관리를 외부에 위임할 때 고려해야 할 사항은 여러 가지 역할이나 권한을 선언하는 대신에 스코프를 다뤄야 한다는 점이다  
-스코프도 `SCOPE_` 접두어가 붙은 권한의 일종이라고 생각하면 쉽다  
-OAuth 프로바이더가 제공하는 스코프 외에 커스텀 스코프가 필요한지를 검토해보는 것이 중요하다  
-필요하지 않다면 OAuth 프로바이더를 사용하더라도 괜찮다  
-하지만 필요하다면 옥타를 사용하는 것이 좋다  
-구글이나 페이스북은 자기들의 API를 사용하는 데 중점을 두고 있어서 커스텀 스코프나 그룹을 만들 수 없다  
-
-커스텀 스코프 없이 일반적인 접근 제어만 필요하다면 구글이나 페이스북을 선택하면 된다  
-사용자가 대부분 개발자라면 깃허브를 사용할 수 있다  
-세밀한 역할 관리가 필요하다면 옥타를 선택하는 편이 가장 좋을 것이다
-
-## 9장에서 배운 내용
-- 스프링 부트 시큐리티 스타터를 추가해서 데모 애플리케이션 생성
-- 데이터베이스를 통해 사용자 정보를 관리할 수 있도록 스프링 데이터 리포지토리 사용
-- URL 기준 보안 규칙 설정
-- 메소드 수준 보안 설정을 통한 상세한 접근 제어
-- 사용자 관리를 구글 같은 서드파티 OAuth 프로바이더에 위임
-
-# 한국어판 특별부록 - 리액티브 스트림 시퀀스 다이어그램
-
-![reactive](img/20.png)
-
-위에서 아래쪽으로 순서대로 상호작용이 발생  
-실선 화살표는 메소드 호출을 의미함  
-화살표 위에는 메소드 이름, 아래에는 메소드 인자를 표시함  
-점선 화살표는 반환을 의미하며 화살표 아래 괄호 없이 표시된 것은 반환 값
-
-**Processor** 인터페이스는 자기만의 고유 메소드는 없고 단순히 **Publish**, **Subscriber** 두 가지 인터페이스를 상속받는다  
-**Processor** 없이 나머지 3개만으로도 리액티브 스트림 협력을 구성할 수 있으므로 다이어그램에서 **Processor**는 제외 한다  
-**Publisher**, **Subscriber**, **Subscription** 인터페이스가 가지고 있는 모든 메소드가 표시돼 있으며  
-**Publisher**의 `map`, `flatMap`, `zip`, ...라고 표시한 리액티브 연산자는 리액티브 스트림 명세에는 없지만  
-설명의 편의를 위해 리액티브 스트림 구현체인 리액터의 **Flux**에서 가져왔다
-
-## 데이터 핸들러 로직 정의 및 Subscriber 생성
-데이터를 요청하는 Client는 데이터를 받아서 어떻게 처리할지, 데이터를 받는 과정에서 오류를 전달받으면 어떻게 처리할지  
-데이터를 모두 받은 후에 어떤 일을 할지 정해야 할 책임을 가지고 있다  
-그런 책임을 각각 `nextConsumer`, `errorConsumer`, `completeRunnable`로 정의하고 이를 주입하면서 **subscriber**를 생성한다
-
-설명의 편의를 위해 **subscriber** 생성을 가장 먼저 표시했는데 그림을 보면 알 수 있겠지만 반드시 가장 먼저 수행할 필요는 없다  
-**subscriber**는 `publisher.subscribe(subscriber)`가 호출되기 전까지만 생성하면 된다
-
-## DataProvider에 데이터 요청 및 Publisher 생성
-클라이언트는 **DataProvider**에게 데이터를 요청한다  
-**DataProvider**는 특정 클래스 이름은 아니고 클라이언트로부터 호출을 받으면 데이터 저장소와 연동해서
-실제 데이터를 반환하는 책임이 있는 객체를 의미한다고 보면된다  
-예를 들면 `ReactiveMongoOperations(ReactiveMongoTemplate)`나 **ReactiveMongoRepository**라고 생각하면 된다  
-이 **DataProvider**는 나중에 데이터를 제공할 수 있도록 콜백을 생성하고 이를 publisher를 생성하면서 주입해준다  
-**DataProvider**는 생성한 **publisher**를 클라이언트에 반환한다
-
-## 구독하기
-클라이언트는 **DataProvider**로부터 **publisher**를 반환받고 나서, 나중에 **publisher**가 발행할 데이터를 받아서
-비즈니스 요구에 맞게 가공하는 데 사용할 로직을 추가한다  
-`map`, `flatMap`, `zip`등 여러 리액티브 연산자가 이때 사용된다
-
-클라이언트는 데이터 가공 로직 추가를 마친 후에 `publisher.subscribe(subscriber)`를 호출한다  
-리액티브 스트림에서 절대 잊어서는 안 될 가장 중요한 특징 중 하나는 구독하기 전에는 아무 일도 일어나지 않는다는 점이다  
-즉 앞에서 아무리 `nextConsumer`, `errorConsumer`, `completeRunnable`을 모두 정의하고 **DataProvider**를 호출해서 데이터를 가져오고  
-가공하는 로직을 구현해뒀다 하더라도 `publisher.subscribe(subscriber)`를 호출하지 않으면 앞서 만든 모든 것은 전혀 실행되지 않는다  
-더 정확하게 말하면 데이터를 가져오는 로직은 아직 콜백에 담겨 있을 뿐이고  
-구독하기 전에는 콜백이 실행되지 않는다  
-지금까지는 스트림 데이터 처리를 위한 파이프라인을 구성한 것 뿐이다  
-`publisher.subscribe(subscriber)`가 호출되면서 드디어 구독이 실행되고 파이프라인에 데이터가 흐르기 시작한다
-
-## Subscription 생성
-`publisher.subscribe(subscriber)`가 호출되면 **publisher**는 인자로 받은 **subscriber**와 자신이 생성될 때 주입받은  
-**dataCallback**을 주입하면서 **subscription**을 생성하고 `subscriber.onSubscribe(subscription)`을 호출해서  
-**subscription**을 **subscriber**에게 전달해준다
-
-## Subscription에 데이터 요청
-**subscriber**는 `onSubscribe(subscription)`을 통해 **subscription**을 전달받으면   
-`subscription.request(numOfData)`를 호출해서 데이터를 요청한다  
-자신이 소화할 수 있을 만큼의 데이터만 요청할 수 있으므로 배압(backpressure) 개념이 이지점에서 발동한다  
-그리고 실제 데이터 접근도 이 시점에서 시작된다
-
-## 실제 데이터 접근 및 onNext/onError/onComplete 호출
-**subscription**은 자신이 생성될 때 주입받은 콜백을 호출해서 **numOfData**만큼만 데이터를 가져오고  
-`subscriber.onNext(data)`를 반복 호출해서 **subscriber**에게 데이터를 전달한다  
-이 과정에서 오류가 발생하면 `subscriber.onError(throwable)`로 오류를 **subscriber**에게 전달하고  
-데이터 전달이 정상적으로 완료되면 `subscriber.onComplete()`를 호출하며 스트림을 처리하는 협동 과정이 종료된다
-
-## 비동기는 어디에?
-리액티브 스트림이 배압과 함꼐 스트림을 비동기로 처리할 수 있는 표준인데, 지금까지 살펴본 협력 구조에서 비동기 처리는 어디에 있는 걸까?
-
-사실 리액티브 스트림이 비동기 스트림 처리 표준이라고는 하지만 네 가지 인터페이스를 보면 비동기 관련 내용은 전혀 없다  
-다시 말해, 비동기 처리 없이 동기 처리만 사용하더라도 스트림을 리액티브 방식으로 처리하는 것이 가능하다  
-결국 리액티브 스트림은 비동기를 강제하지 않는다  
-그래서 비동기 처리는 실질적으로는 구현에 달려 있다
-
-스프링 웹플럭스에서 사용하는 리액터의 비동기 처리 관련 규약은 `reactor.core.scheduler.Scheduler` 인터페이스에 담겨 있다  
-`Scheculer` 인터페이스의 구현체 중 하나인 `ExecutorScheduler`를 보면 다음과 같이 `Runnable task`를 `Executor` 스레드풀을 사용해서 실행하는 것을 확인할 수 있다
-
-```java
-final class ExecutorScheduler implements Scheduler, Scannable {
-
-  final Executor executor;
-  
-  ...
-
-  @Override
-  public Disposable schedule(Runnable task) {
-    if (terminated) {
-      throw Exceptions.failWithRejected();
-    }
-    Objects.requireNonNull(task, "task");
-    ExecutorPlainRunnable r = new ExecutorPlainRunnable(task);
-
-    try {
-      executor.execute(r);
-    } catch (Throwable ex) {
-      if (executor instanceof ExecutorService && ((ExecutorService) executor).isShutdown()) {
-        terminated = true;
-      }
-      Schedulers.handleError(ex);
-      throw Exceptions.failWithRejected(ex);
-    }
-    return r;
-  }
-
-...
-```
-
-리액티브 스트림을 사용해서 개발하다 보면 어쩔 수 없이 리액티브 연산자에 치중하게 되는데 협력 구조를 모른다면  
-"왜 이런 이름의 연산자를 왜 이곳에서 사용하는가?"라는 물음이 자주 걸림돌이 될 것이다  
-그런 어려움을 느낄 때 이 그림을 다시 살펴보면 도움이 될 것이다
+- `@RabbitListener`를 사용해서 **RabbitMQ Listener**를 설정하고 전송받은 메시지를 소비
